@@ -1,18 +1,20 @@
+"""
+Provides a test of the soundcard library. It will record from the default microphone and
+ play back to the default speaker.
+"""
 import sys
+import soundcard as sc
 
 try:
     import pycodec2
-    import numpy
-except:
-    raise (Exception("Need to install with [Codec2]"))
+except Exception as exc:
+    raise ImportError("pycodec2 is required for this test.") from exc
 
 
 def audio_test_soundcard(mode):
     """
-    This is a test of the soundcard library. It will record from the default microphone and play back to the default speaker.
-
+    Test the soundcard library.
     """
-    import soundcard as sc
 
     mode = int(mode)
     c2 = pycodec2.Codec2(mode)
