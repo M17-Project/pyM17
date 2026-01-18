@@ -1,0 +1,45 @@
+"""
+M17 Networking Layer
+
+This module provides high-level networking components for M17:
+- Reflector client (n7tae protocol)
+- DHT-based routing (Kademlia)
+- P2P direct connections
+- High-level async client
+
+This is pyM17's unique value - providing IP networking for M17.
+"""
+
+from m17.net.reflector import (
+    ReflectorConnection,
+    ReflectorProtocol,
+    M17ReflectorClient,
+)
+from m17.net.dht import (
+    M17DHTNode,
+    DHTConfig,
+)
+from m17.net.p2p import (
+    P2PConnection,
+    P2PManager,
+)
+from m17.net.client import (
+    M17NetworkClient,
+    M17ClientConfig,
+)
+
+__all__ = [
+    # Reflector
+    "ReflectorConnection",
+    "ReflectorProtocol",
+    "M17ReflectorClient",
+    # DHT
+    "M17DHTNode",
+    "DHTConfig",
+    # P2P
+    "P2PConnection",
+    "P2PManager",
+    # Client
+    "M17NetworkClient",
+    "M17ClientConfig",
+]
