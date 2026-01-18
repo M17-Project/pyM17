@@ -10,6 +10,8 @@ The Link Setup Frame is transmitted at the start of a stream and contains:
 
 Total: 28 bytes without CRC, 30 bytes with CRC
 
+Supports both M17 v2.0.3 and v3.0.0 TYPE field formats.
+
 Port from libm17/payload/lsf.c with GNSS position encoding.
 """
 
@@ -18,17 +20,27 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass, field
 from enum import IntEnum
-from typing import Optional, Union
+from typing import Optional, Union, List
 
 from m17.core.address import Address
 from m17.core.crc import crc_m17
 from m17.core.types import (
+    # v2.0.3 (legacy)
     M17DataType,
     M17EncryptionSubtype,
     M17EncryptionType,
     M17Type,
     build_type_field,
     parse_type_field,
+    # v3.0.0
+    M17Version,
+    M17Payload,
+    M17Encryption,
+    M17Meta,
+    TypeFieldV3,
+    build_type_field_v3,
+    parse_type_field_v3,
+    detect_type_field_version,
 )
 
 __all__ = [
@@ -36,6 +48,8 @@ __all__ = [
     "MetaPosition",
     "MetaExtendedCallsign",
     "MetaNonce",
+    "MetaText",
+    "MetaAesIV",
     "DataSource",
     "StationType",
     "ValidityField",
@@ -345,6 +359,181 @@ class MetaNonce:
 
 
 @dataclass
+class MetaText:
+    """
+    M17 v3.0.0 Text Data META field encoding.
+
+    In Stream Mode, text can span up to 15 consecutive META blocks,
+    allowing up to 195 bytes (15 * 13) of UTF-8 text.
+
+    In Packet Mode, limited to 13 bytes (single block).
+
+    Each block structure:
+    - Byte 0: Control byte [block_count:4][block_index:4]
+    - Bytes 1-13: UTF-8 text data (null-padded)
+    """
+
+    text: str = ""
+    block_count: int = 1  # Total blocks in message (1-15)
+    block_index: int = 1  # Current block index (1-15)
+
+    # Maximum text per block (13 bytes)
+    _MAX_TEXT_PER_BLOCK: int = 13
+    # Maximum blocks in stream mode
+    _MAX_BLOCKS: int = 15
+
+    def to_bytes(self) -> bytes:
+        """
+        Encode text data to 14-byte META field (single block).
+
+        For multi-block text, use to_blocks() instead.
+
+        Returns:
+            14-byte META field.
+        """
+        tmp = bytearray(14)
+
+        # Control byte: [block_count:4][block_index:4]
+        tmp[0] = ((self.block_count & 0x0F) << 4) | (self.block_index & 0x0F)
+
+        # UTF-8 text data (up to 13 bytes)
+        text_bytes = self.text.encode("utf-8")[:self._MAX_TEXT_PER_BLOCK]
+        tmp[1 : 1 + len(text_bytes)] = text_bytes
+
+        return bytes(tmp)
+
+    @classmethod
+    def from_bytes(cls, data: bytes) -> MetaText:
+        """
+        Decode 14-byte META field to text data.
+
+        Args:
+            data: 14-byte META field.
+
+        Returns:
+            MetaText with decoded values.
+        """
+        if len(data) != 14:
+            raise ValueError(f"META field must be 14 bytes, got {len(data)}")
+
+        block_count = (data[0] >> 4) & 0x0F
+        block_index = data[0] & 0x0F
+
+        # Find null terminator or use all 13 bytes
+        text_data = data[1:14]
+        null_pos = text_data.find(b"\x00")
+        if null_pos >= 0:
+            text_data = text_data[:null_pos]
+
+        try:
+            text = text_data.decode("utf-8")
+        except UnicodeDecodeError:
+            text = text_data.decode("utf-8", errors="replace")
+
+        return cls(text=text, block_count=block_count, block_index=block_index)
+
+    @classmethod
+    def encode_multi_block(cls, text: str) -> List[bytes]:
+        """
+        Encode long text into multiple META blocks for stream mode.
+
+        Args:
+            text: UTF-8 text to encode.
+
+        Returns:
+            List of 14-byte META blocks.
+
+        Raises:
+            ValueError: If text is too long (> 195 bytes).
+        """
+        text_bytes = text.encode("utf-8")
+
+        if len(text_bytes) > cls._MAX_TEXT_PER_BLOCK * cls._MAX_BLOCKS:
+            raise ValueError(
+                f"Text too long: {len(text_bytes)} bytes, max {cls._MAX_TEXT_PER_BLOCK * cls._MAX_BLOCKS}"
+            )
+
+        # Calculate number of blocks needed
+        block_count = (len(text_bytes) + cls._MAX_TEXT_PER_BLOCK - 1) // cls._MAX_TEXT_PER_BLOCK
+        block_count = max(1, block_count)
+
+        blocks = []
+        for i in range(block_count):
+            start = i * cls._MAX_TEXT_PER_BLOCK
+            end = start + cls._MAX_TEXT_PER_BLOCK
+            chunk = text_bytes[start:end]
+
+            # Decode chunk back to string for the dataclass
+            try:
+                chunk_str = chunk.decode("utf-8")
+            except UnicodeDecodeError:
+                chunk_str = chunk.decode("utf-8", errors="replace")
+
+            meta = cls(text=chunk_str, block_count=block_count, block_index=i + 1)
+            blocks.append(meta.to_bytes())
+
+        return blocks
+
+    @classmethod
+    def decode_multi_block(cls, blocks: List[bytes]) -> str:
+        """
+        Decode multiple META blocks back to text.
+
+        Args:
+            blocks: List of 14-byte META blocks.
+
+        Returns:
+            Reconstructed UTF-8 text.
+        """
+        # Sort blocks by index
+        parsed = [cls.from_bytes(b) for b in blocks]
+        parsed.sort(key=lambda x: x.block_index)
+
+        # Concatenate text
+        return "".join(p.text for p in parsed)
+
+
+@dataclass
+class MetaAesIV:
+    """
+    M17 v3.0.0 AES Initialization Vector META field.
+
+    Contains the 14-byte IV for AES encryption.
+    Note: Full AES IV is 16 bytes; the remaining 2 bytes
+    come from the frame number in stream mode.
+    """
+
+    iv: bytes = field(default_factory=lambda: bytes(14))
+
+    def to_bytes(self) -> bytes:
+        """
+        Encode AES IV to 14-byte META field.
+
+        Returns:
+            14-byte META field.
+        """
+        if len(self.iv) < 14:
+            return self.iv + bytes(14 - len(self.iv))
+        return self.iv[:14]
+
+    @classmethod
+    def from_bytes(cls, data: bytes) -> MetaAesIV:
+        """
+        Decode 14-byte META field to AES IV.
+
+        Args:
+            data: 14-byte META field.
+
+        Returns:
+            MetaAesIV with decoded value.
+        """
+        if len(data) != 14:
+            raise ValueError(f"META field must be 14 bytes, got {len(data)}")
+
+        return cls(iv=bytes(data))
+
+
+@dataclass
 class LinkSetupFrame:
     """
     M17 Link Setup Frame.
@@ -513,6 +702,144 @@ class LinkSetupFrame:
             MetaNonce with decoded values.
         """
         return MetaNonce.from_bytes(self.meta)
+
+    # =========================================================================
+    # M17 v3.0.0 TYPE Field Methods
+    # =========================================================================
+
+    @property
+    def version(self) -> M17Version:
+        """Detect M17 spec version from TYPE field."""
+        return detect_type_field_version(self.type_field)
+
+    @property
+    def payload_type(self) -> M17Payload:
+        """Get v3.0.0 payload type (or VERSION_DETECT for v2.0.3)."""
+        return M17Payload((self.type_field >> 4) & 0x0F)
+
+    @property
+    def encryption_v3(self) -> M17Encryption:
+        """Get v3.0.0 encryption type."""
+        return M17Encryption((self.type_field >> 1) & 0x07)
+
+    @property
+    def is_signed(self) -> bool:
+        """Get v3.0.0 digital signature flag."""
+        return bool(self.type_field & 0x01)
+
+    @property
+    def meta_type(self) -> M17Meta:
+        """Get v3.0.0 META field type."""
+        return M17Meta((self.type_field >> 12) & 0x0F)
+
+    @property
+    def can_v3(self) -> int:
+        """Get v3.0.0 Channel Access Number."""
+        return (self.type_field >> 8) & 0x0F
+
+    def get_parsed_type_v3(self) -> TypeFieldV3:
+        """Get fully parsed v3.0.0 TYPE field."""
+        return parse_type_field_v3(self.type_field)
+
+    def set_type_v3(
+        self,
+        payload: M17Payload = M17Payload.VOICE_3200,
+        encryption: M17Encryption = M17Encryption.NONE,
+        signed: bool = False,
+        meta: M17Meta = M17Meta.NONE,
+        can: int = 0,
+    ) -> None:
+        """
+        Set TYPE field using v3.0.0 format.
+
+        Args:
+            payload: Payload/codec type.
+            encryption: Encryption method.
+            signed: Digital signature flag.
+            meta: META field type.
+            can: Channel Access Number (0-15).
+        """
+        self.type_field = build_type_field_v3(payload, encryption, signed, meta, can)
+
+    # =========================================================================
+    # M17 v3.0.0 META Field Methods
+    # =========================================================================
+
+    def set_text_meta(self, text: str) -> None:
+        """
+        Set META field with text data (v3.0.0).
+
+        For single-block text (up to 13 bytes). For longer text,
+        use set_text_meta_blocks() which returns multiple LSFs.
+
+        Args:
+            text: UTF-8 text (up to 13 bytes).
+        """
+        meta_text = MetaText(text=text[:13], block_count=1, block_index=1)
+        self.meta = meta_text.to_bytes()
+
+    def get_text_meta(self) -> MetaText:
+        """
+        Get text data from META field (v3.0.0).
+
+        Returns:
+            MetaText with decoded values.
+        """
+        return MetaText.from_bytes(self.meta)
+
+    def set_aes_iv_meta(self, iv: bytes) -> None:
+        """
+        Set META field with AES IV (v3.0.0).
+
+        Args:
+            iv: 14-byte AES initialization vector.
+        """
+        aes_iv = MetaAesIV(iv=iv)
+        self.meta = aes_iv.to_bytes()
+
+    def get_aes_iv_meta(self) -> MetaAesIV:
+        """
+        Get AES IV from META field (v3.0.0).
+
+        Returns:
+            MetaAesIV with decoded value.
+        """
+        return MetaAesIV.from_bytes(self.meta)
+
+    @classmethod
+    def create_text_message_frames(
+        cls,
+        dst: Union[str, Address],
+        src: Union[str, Address],
+        text: str,
+        can: int = 0,
+    ) -> List["LinkSetupFrame"]:
+        """
+        Create multiple LSFs for a multi-block text message (v3.0.0).
+
+        Args:
+            dst: Destination address.
+            src: Source address.
+            text: UTF-8 text to send (up to 195 bytes).
+            can: Channel Access Number.
+
+        Returns:
+            List of LinkSetupFrames, one per text block.
+        """
+        blocks = MetaText.encode_multi_block(text)
+        frames = []
+
+        for block in blocks:
+            lsf = cls(dst=dst, src=src)
+            lsf.set_type_v3(
+                payload=M17Payload.DATA_ONLY,
+                meta=M17Meta.TEXT_DATA,
+                can=can,
+            )
+            lsf.meta = block
+            frames.append(lsf)
+
+        return frames
 
     def to_bytes_without_crc(self) -> bytes:
         """

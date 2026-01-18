@@ -2,7 +2,7 @@
 
 > **Note:** This library is under active development and the API may change. Not recommended for production use yet.
 
-A Python library for the M17 digital radio protocol, compliant with M17 specification v2.0.3.
+A Python library for the M17 digital radio protocol, compliant with M17 specification v2.0.3 and v3.0.0 (WIP).
 
 ## Features
 
@@ -10,12 +10,17 @@ A Python library for the M17 digital radio protocol, compliant with M17 specific
   - Base-40 callsign encoding/decoding with hash-address and broadcast support
   - CRC-16 (polynomial 0x5935) per M17 specification
   - TYPE field handling with encryption and metadata support
+  - v3.0.0 TYPE field with expanded payload types, encryption options, and META types
+  - Automatic version detection (v2.0.3 vs v3.0.0)
 
 - **Frame Handling**
   - Link Setup Frame (LSF) with META field variants (position, extended callsign, nonce)
   - Stream frames for real-time voice/data
   - Packet frames for bulk data transfer
   - IP frames for M17-over-IP networking
+  - v3.0.0 multi-block text META (up to 195 bytes over 15 frames)
+  - v3.0.0 TLE packet type for satellite orbital data
+  - v3.0.0 packet protocol identifiers (RAW, AX.25, APRS, 6LoWPAN, IPv4, SMS, Winlink, TLE)
 
 - **Forward Error Correction (FEC)**
   - Golay(24,12) codec for LICH protection
@@ -145,6 +150,53 @@ interleaved = interleave(encoded)  # Spread burst errors
 randomized = randomize(interleaved)  # Decorrelate
 ```
 
+### v3.0.0 Features
+
+```python
+from m17.core.types import (
+    M17Payload, M17Encryption, M17Meta, M17Version,
+    build_type_field_v3, parse_type_field_v3, detect_type_field_version,
+)
+from m17.frames.lsf import LinkSetupFrame, MetaText
+from m17.frames.packet import TLEPacket, PacketProtocol
+
+# Build v3.0.0 TYPE field
+type_field = build_type_field_v3(
+    payload=M17Payload.VOICE_3200,
+    encryption=M17Encryption.AES_256,
+    signed=True,
+    meta=M17Meta.TEXT_DATA,
+    can=5,
+)
+
+# Detect version from existing frame
+version = detect_type_field_version(0x0005)  # v2.0.3
+version = detect_type_field_version(0x0020)  # v3.0.0
+
+# Create LSF with v3.0.0 TYPE field
+lsf = LinkSetupFrame(dst="W2FBI", src="N0CALL")
+lsf.set_type_v3(
+    payload=M17Payload.VOICE_3200,
+    meta=M17Meta.TEXT_DATA,
+)
+
+# Multi-block text META (up to 195 bytes)
+lsf.set_text_meta("Hello M17! This is a longer message.")
+text_blocks = MetaText.encode_multi_block("Very long message...")
+
+# TLE packet for satellite data
+tle = TLEPacket(
+    satellite_name="ISS (ZARYA)",
+    tle_line1="1 25544U 98067A   21275.52043534...",
+    tle_line2="2 25544  51.6442 123.4567...",
+)
+packet_data = tle.to_bytes()
+
+# Packet protocol identifiers
+print(PacketProtocol.APRS)    # 0x02
+print(PacketProtocol.TLE)     # 0x07
+```
+
 ## Module Structure
 
 ```
@@ -203,7 +255,9 @@ pytest --cov=m17 --cov-report=html
 
 ## Specification Compliance
 
-This library implements the [M17 Protocol Specification v2.0.3](https://spec.m17project.org/).
+This library implements the [M17 Protocol Specification](https://spec.m17project.org/):
+- **v2.0.3** - Fully supported (legacy)
+- **v3.0.0** - Work in progress (based on dev branch)
 
 Key compliance points:
 - CRC-16 polynomial 0x5935, init 0xFFFF
@@ -212,6 +266,12 @@ Key compliance points:
 - K=5 rate 1/2 convolutional code (G1=0x19, G2=0x17)
 - 368-element QPP interleaver
 - 46-byte randomizer sequence
+
+v3.0.0 additions:
+- Redesigned TYPE field: PAYLOAD(4), ENCRYPTION(3), SIGNED(1), META(4), CAN(4)
+- Multi-block text META (15 blocks × 13 bytes = 195 bytes max)
+- TLE packet protocol for satellite orbital data
+- Automatic version detection via PAYLOAD field
 
 ## License
 
