@@ -1,5 +1,7 @@
 # pyM17
 
+> **Note:** This library is under active development and the API may change. Not recommended for production use yet.
+
 A Python library for the M17 digital radio protocol, compliant with M17 specification v2.0.3.
 
 ## Features

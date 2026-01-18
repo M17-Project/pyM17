@@ -1,13 +1,13 @@
 [tool.poetry]
 name = "m17"
-version = "1.0.0"
+version = "0.1.1"
 description = "Python M17 Protocol Library - M17 v2.0.3 compliant"
 authors = ["Luke Stamm <we3dz@we3dz.com>"]
 readme = "../../README.md"
 license = "MIT"
 keywords = ["m17", "amateur-radio", "ham-radio", "digital-voice", "codec2"]
 classifiers = [
-    "Development Status :: 4 - Beta",
+    "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",

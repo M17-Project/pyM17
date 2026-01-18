@@ -111,17 +111,17 @@ Remaining work items for pyM17 development.
 
 ### Future Versions
 
-- [ ] **v1.1.0 - Enhanced networking**
+- [ ] **v0.2.0 - Enhanced networking**
   - [ ] WebSocket transport option
   - [ ] MQTT integration
   - [ ] REST API for remote control
 
-- [ ] **v1.2.0 - RF support**
+- [ ] **v0.3.0 - RF support**
   - [ ] SDR integration (RTL-SDR, HackRF)
   - [ ] Demodulator implementation
   - [ ] Modulator implementation
 
-- [ ] **v2.0.0 - Breaking changes**
+- [ ] **v1.0.0 - Breaking changes**
   - [ ] Remove all deprecated code
   - [ ] Drop Python 3.11 support
   - [ ] Async-first API
