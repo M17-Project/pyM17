@@ -5,6 +5,69 @@ All notable changes to pyM17 will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.2] - 2026-01-18
+
+### Added
+
+#### M17 v3.0.0 Specification Support
+
+- **TYPE Field v3.0.0** (`types.py`)
+  - Complete rewrite of TYPE field for v3.0.0 specification
+  - New enums: `M17Payload`, `M17Encryption`, `M17Meta`, `M17Version`
+  - `TypeFieldV3` NamedTuple for parsed v3.0.0 fields
+  - `build_type_field_v3()` / `parse_type_field_v3()` functions
+  - `detect_type_field_version()` for automatic v2/v3 detection
+  - v3.0.0 PAYLOAD types: DATA_ONLY, VOICE_3200, VOICE_1600_DATA, PACKET
+  - v3.0.0 ENCRYPTION types: 8/16/24-bit scrambler, 128/192/256-bit AES
+  - v3.0.0 META types: GNSS, Extended Callsign, Text, AES IV
+  - Digital signature support (SIGNED flag)
+  - Expanded CAN (Channel Access Number) to 4 bits
+
+- **Multi-Block Text META** (`lsf.py`)
+  - `MetaText` class for TEXT_DATA META type
+  - Support for 1-15 blocks (up to 195 bytes of UTF-8 text)
+  - `encode_multi_block()` / `decode_multi_block()` methods
+  - Control byte format: [BLOCK_COUNT:4][BLOCK_INDEX:4]
+
+- **AES IV META** (`lsf.py`)
+  - `MetaAesIV` class for AES initialization vector
+  - 14-byte IV field for AES encryption
+
+- **TLE Packet Type** (`packet.py`, `constants.py`)
+  - `TLEPacket` class for satellite orbital data
+  - Standard 3-line TLE format (name + line1 + line2)
+  - Protocol identifier 0x07
+  - CRC verification on parse
+  - `to_packet_frame()` / `from_packet_frame()` conversion
+
+- **Packet Protocol Identifiers** (`constants.py`)
+  - `PACKET_PROTOCOL_RAW` (0x00)
+  - `PACKET_PROTOCOL_AX25` (0x01)
+  - `PACKET_PROTOCOL_APRS` (0x02)
+  - `PACKET_PROTOCOL_6LOWPAN` (0x03)
+  - `PACKET_PROTOCOL_IPV4` (0x04)
+  - `PACKET_PROTOCOL_SMS` (0x05)
+  - `PACKET_PROTOCOL_WINLINK` (0x06)
+  - `PACKET_PROTOCOL_TLE` (0x07)
+
+- **LSF v3.0.0 Methods** (`lsf.py`)
+  - `set_type_v3()` - Set TYPE field using v3.0.0 format
+  - `set_text_meta()` / `get_text_meta()` - Text META convenience methods
+  - `set_aes_iv_meta()` / `get_aes_iv_meta()` - AES IV META methods
+  - `create_text_message_frames()` - Factory for multi-frame text messages
+  - Properties: `version`, `payload_type`, `encryption_v3`, `is_signed`, `meta_type`, `can_v3`
+
+- **Version Detection**
+  - Automatic detection via PAYLOAD field (0x0 = v2.0.3, non-zero = v3.0.0)
+  - Backward compatible: v2.0.3 frames continue to work unchanged
+
+### Changed
+
+- Legacy v2.0.3 TYPE field enums marked as DEPRECATED (still functional)
+- Test suite expanded from 120 to 156 tests
+
+---
+
 ## [0.1.1] - 2026-01-18
 
 ### Added

@@ -6,13 +6,13 @@ Remaining work items for pyM17 development.
 
 ### Testing & Quality
 
-- [ ] **Increase test coverage** - Current: 30%, Target: 80%+
+- [ ] **Increase test coverage** - Current: 35%, Target: 80%+
   - [ ] Add tests for `m17/codec/viterbi.py` (21% coverage)
   - [ ] Add tests for `m17/codec/puncture.py` (28% coverage)
   - [ ] Add tests for `m17/codec/randomize.py` (34% coverage)
-  - [ ] Add tests for `m17/codec/convolutional.py`
+  - [ ] Add tests for `m17/codec/convolutional.py` (20% coverage)
   - [ ] Add tests for `m17/net/` modules (0% coverage)
-  - [ ] Add tests for `m17/frames/packet.py` (45% coverage)
+  - [x] Add tests for `m17/frames/packet.py` (78% coverage) - TLE tests added
 
 - [ ] **Run mypy strict mode** - Fix all type errors
   ```bash
@@ -79,9 +79,10 @@ Remaining work items for pyM17 development.
   - [ ] Implement BERT frame reception/analysis
   - [ ] Add BER calculation utilities
 
-- [ ] **SMS/Text support**
-  - [ ] Implement text data encoding in META field
-  - [ ] Implement text data decoding
+- [ ] **Digital signatures (v3.0.0)**
+  - [ ] Implement ECDSA secp256r1 signing
+  - [ ] Implement signature verification
+  - [ ] Add key generation utilities
 
 ## Low Priority
 
@@ -140,6 +141,10 @@ Remaining work items for pyM17 development.
 4. **Test flakiness** - Some tests use random data (`example_bytes()`). Consider
    using fixed seeds for reproducibility.
 
+5. **M17 v3.0.0 spec is WIP** - The v3.0.0 specification is still being finalized.
+   Implementation may need updates when the spec is released. Track changes at
+   the M17_spec repository dev branch.
+
 ## Completed
 
 - [x] Core protocol implementation (CRC, Address, Types)
@@ -151,6 +156,18 @@ Remaining work items for pyM17 development.
 - [x] Updated pyproject.toml with extras
 - [x] README.md update
 - [x] CHANGELOG.md creation
+
+### v0.1.2 - M17 v3.0.0 Support
+
+- [x] TYPE field v3.0.0 redesign (PAYLOAD, ENCRYPTION, SIGNED, META, CAN)
+- [x] Automatic version detection (v2.0.3 vs v3.0.0)
+- [x] Multi-block text META (up to 195 bytes over 15 frames)
+- [x] AES IV META field support
+- [x] TLE packet type for satellite orbital data
+- [x] Packet protocol identifiers (RAW, AX.25, APRS, 6LoWPAN, IPv4, SMS, Winlink, TLE)
+- [x] Expanded encryption options (8/16/24-bit scrambler, 128/192/256-bit AES)
+- [x] v3.0.0 test suite (36 tests, total now 156 tests)
+- [x] Backward compatibility with v2.0.3 frames
 
 ---
 

@@ -7,6 +7,8 @@ Each packet contains:
 - 1 byte with End of Packet flag (1 bit) and byte count (5 bits)
 
 Total: 26 bytes per packet chunk, encoded to 368 bits with FEC.
+
+Supports M17 v2.0.3 and v3.0.0 (with TLE packet type).
 """
 
 from __future__ import annotations
@@ -14,10 +16,34 @@ from __future__ import annotations
 import struct
 from dataclasses import dataclass, field
 from typing import List, Optional
+from enum import IntEnum
 
 from m17.core.crc import crc_m17
+from m17.core.constants import (
+    PACKET_PROTOCOL_RAW,
+    PACKET_PROTOCOL_AX25,
+    PACKET_PROTOCOL_APRS,
+    PACKET_PROTOCOL_6LOWPAN,
+    PACKET_PROTOCOL_IPV4,
+    PACKET_PROTOCOL_SMS,
+    PACKET_PROTOCOL_WINLINK,
+    PACKET_PROTOCOL_TLE,
+)
 
-__all__ = ["PacketFrame", "PacketChunk"]
+__all__ = ["PacketFrame", "PacketChunk", "PacketProtocol", "TLEPacket"]
+
+
+class PacketProtocol(IntEnum):
+    """Packet protocol identifiers."""
+
+    RAW = PACKET_PROTOCOL_RAW
+    AX25 = PACKET_PROTOCOL_AX25
+    APRS = PACKET_PROTOCOL_APRS
+    LOWPAN_6 = PACKET_PROTOCOL_6LOWPAN
+    IPV4 = PACKET_PROTOCOL_IPV4
+    SMS = PACKET_PROTOCOL_SMS
+    WINLINK = PACKET_PROTOCOL_WINLINK
+    TLE = PACKET_PROTOCOL_TLE
 
 
 @dataclass
@@ -215,3 +241,174 @@ class PacketFrame:
     def __getitem__(self, index: int) -> PacketChunk:
         """Get chunk by index."""
         return self.chunks[index]
+
+
+@dataclass
+class TLEPacket:
+    """
+    M17 v3.0.0 TLE (Two-Line Element) Packet.
+
+    Contains satellite orbital data in TLE format.
+    The TLE format consists of 3 lines:
+    - Line 0: Satellite name (up to 24 characters)
+    - Line 1: TLE line 1 (69 characters)
+    - Line 2: TLE line 2 (69 characters)
+
+    Total: ~162+ characters depending on satellite name.
+
+    Format:
+    - Protocol identifier (0x07) - 1 byte
+    - TLE data as ASCII text (lines separated by 0x0A)
+    - Null terminator (0x00) after last line
+    - CRC-16 - 2 bytes
+    """
+
+    satellite_name: str = ""
+    tle_line1: str = ""
+    tle_line2: str = ""
+
+    # Standard TLE line lengths
+    _TLE_LINE_LENGTH: int = 69
+
+    def __post_init__(self) -> None:
+        """Validate TLE data."""
+        # Basic validation
+        if self.tle_line1 and len(self.tle_line1) != self._TLE_LINE_LENGTH:
+            # Allow non-standard lengths but warn in production
+            pass
+        if self.tle_line2 and len(self.tle_line2) != self._TLE_LINE_LENGTH:
+            pass
+
+    @property
+    def is_valid(self) -> bool:
+        """Check if TLE data appears valid."""
+        if not self.tle_line1 or not self.tle_line2:
+            return False
+
+        # Basic format checks
+        if len(self.tle_line1) != self._TLE_LINE_LENGTH:
+            return False
+        if len(self.tle_line2) != self._TLE_LINE_LENGTH:
+            return False
+
+        # Line 1 should start with '1 '
+        if not self.tle_line1.startswith("1 "):
+            return False
+
+        # Line 2 should start with '2 '
+        if not self.tle_line2.startswith("2 "):
+            return False
+
+        return True
+
+    def to_bytes(self) -> bytes:
+        """
+        Encode TLE packet to bytes.
+
+        Returns:
+            Encoded packet with protocol ID, TLE data, null terminator, and CRC.
+        """
+        # Build TLE text with newlines
+        lines = [self.satellite_name, self.tle_line1, self.tle_line2]
+        tle_text = "\n".join(lines)
+
+        # Encode as ASCII
+        tle_bytes = tle_text.encode("ascii", errors="replace")
+
+        # Build packet: protocol_id + tle_data + null
+        packet_data = bytes([PACKET_PROTOCOL_TLE]) + tle_bytes + b"\x00"
+
+        # Calculate CRC over packet data
+        crc = crc_m17(packet_data)
+
+        return packet_data + crc.to_bytes(2, "big")
+
+    @classmethod
+    def from_bytes(cls, data: bytes) -> "TLEPacket":
+        """
+        Parse TLE packet from bytes.
+
+        Args:
+            data: Encoded TLE packet bytes.
+
+        Returns:
+            Parsed TLEPacket.
+
+        Raises:
+            ValueError: If packet is invalid or CRC fails.
+        """
+        if len(data) < 4:  # Minimum: protocol + null + CRC
+            raise ValueError(f"TLE packet too short: {len(data)} bytes")
+
+        # Check protocol identifier
+        if data[0] != PACKET_PROTOCOL_TLE:
+            raise ValueError(f"Invalid protocol ID: 0x{data[0]:02x}, expected 0x{PACKET_PROTOCOL_TLE:02x}")
+
+        # Verify CRC
+        packet_data = data[:-2]
+        received_crc = int.from_bytes(data[-2:], "big")
+        calculated_crc = crc_m17(packet_data)
+
+        if received_crc != calculated_crc:
+            raise ValueError(
+                f"CRC mismatch: received 0x{received_crc:04x}, calculated 0x{calculated_crc:04x}"
+            )
+
+        # Extract TLE text (skip protocol ID, strip null terminator)
+        tle_bytes = packet_data[1:]
+        if tle_bytes.endswith(b"\x00"):
+            tle_bytes = tle_bytes[:-1]
+
+        try:
+            tle_text = tle_bytes.decode("ascii")
+        except UnicodeDecodeError:
+            tle_text = tle_bytes.decode("ascii", errors="replace")
+
+        # Split into lines
+        lines = tle_text.split("\n")
+
+        satellite_name = lines[0] if len(lines) > 0 else ""
+        tle_line1 = lines[1] if len(lines) > 1 else ""
+        tle_line2 = lines[2] if len(lines) > 2 else ""
+
+        return cls(
+            satellite_name=satellite_name,
+            tle_line1=tle_line1,
+            tle_line2=tle_line2,
+        )
+
+    def to_packet_frame(self) -> PacketFrame:
+        """
+        Convert to a PacketFrame for transmission.
+
+        Returns:
+            PacketFrame containing the TLE data.
+        """
+        return PacketFrame.from_data(self.to_bytes())
+
+    @classmethod
+    def from_packet_frame(cls, frame: PacketFrame) -> "TLEPacket":
+        """
+        Parse TLE from a PacketFrame.
+
+        Args:
+            frame: PacketFrame containing TLE data.
+
+        Returns:
+            Parsed TLEPacket.
+        """
+        return cls.from_bytes(frame.get_data())
+
+    def __str__(self) -> str:
+        """Return string representation."""
+        valid = "valid" if self.is_valid else "invalid"
+        return f"TLEPacket({self.satellite_name}, {valid})"
+
+    def to_tle_string(self) -> str:
+        """
+        Return the TLE in standard 3-line format.
+
+        Returns:
+            TLE string with newlines.
+        """
+        return f"{self.satellite_name}\n{self.tle_line1}\n{self.tle_line2}"

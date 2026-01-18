@@ -1,8 +1,8 @@
 """
 M17 Protocol Constants
 
-Contains sync words, frame sizes, and other protocol constants
-per M17 specification v2.0.3.
+Contains sync words, frame sizes, and other protocol constants.
+Supports M17 specification v2.0.3 and v3.0.0.
 """
 
 from __future__ import annotations
@@ -38,6 +38,15 @@ __all__ = [
     # Network
     "M17_MAGIC_NUMBER",
     "DEFAULT_PORT",
+    # Packet Protocol Identifiers (v3.0.0)
+    "PACKET_PROTOCOL_RAW",
+    "PACKET_PROTOCOL_AX25",
+    "PACKET_PROTOCOL_APRS",
+    "PACKET_PROTOCOL_6LOWPAN",
+    "PACKET_PROTOCOL_IPV4",
+    "PACKET_PROTOCOL_SMS",
+    "PACKET_PROTOCOL_WINLINK",
+    "PACKET_PROTOCOL_TLE",
     # Frame layout structs (for backward compatibility)
     "M17_ADDRESS_LAYOUT_STRUCT",
     "M17_PAYLOAD_LAYOUT_STRUCT",
@@ -161,3 +170,31 @@ REGULAR_FRAME_LAYOUT_STRUCT: str = f"6B {M17_PAYLOAD_LAYOUT_STRUCT}"
 # IP frame layout: MAGIC(4B) + SID(2B) + LICH(28B) + PAYLOAD(12B) = 46 bytes
 # Note: This matches existing implementation
 IP_FRAME_LAYOUT_STRUCT: str = f"4B H {LICH_FRAME_LAYOUT_STRUCT} {M17_PAYLOAD_LAYOUT_STRUCT}"
+
+# ============================================================================
+# Packet Protocol Identifiers (v3.0.0)
+# ============================================================================
+
+# Raw data (no protocol)
+PACKET_PROTOCOL_RAW: int = 0x00
+
+# AX.25 protocol
+PACKET_PROTOCOL_AX25: int = 0x01
+
+# APRS protocol
+PACKET_PROTOCOL_APRS: int = 0x02
+
+# 6LoWPAN (IPv6 over Low-Power Wireless)
+PACKET_PROTOCOL_6LOWPAN: int = 0x03
+
+# IPv4 protocol
+PACKET_PROTOCOL_IPV4: int = 0x04
+
+# SMS (Short Message Service)
+PACKET_PROTOCOL_SMS: int = 0x05
+
+# Winlink protocol
+PACKET_PROTOCOL_WINLINK: int = 0x06
+
+# TLE (Two-Line Element) - v3.0.0 addition for satellite orbital data
+PACKET_PROTOCOL_TLE: int = 0x07
