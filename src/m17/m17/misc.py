@@ -128,4 +128,12 @@ def c_array_init(bs: bytes):
 
 
 if __name__ == "__main__":
-    vars()[sys.argv[1]](*sys.argv[2:])
+    _CLI_COMMANDS = {
+        "c_array_init_file": c_array_init_file,
+        "demonstrate_chunk": demonstrate_chunk,
+    }
+    if len(sys.argv) < 2 or sys.argv[1] not in _CLI_COMMANDS:
+        print(f"Usage: python -m m17.misc <command> [args]")
+        print(f"Commands: {', '.join(_CLI_COMMANDS.keys())}")
+        sys.exit(1)
+    _CLI_COMMANDS[sys.argv[1]](*sys.argv[2:])

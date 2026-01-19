@@ -2,7 +2,31 @@
 
 Remaining work items for pyM17 development.
 
+## Critical
+
+### Security
+
+- [x] **Fix arbitrary code execution in `misc.py:131` and `apps.py:344`**
+  ```python
+  vars()[sys.argv[1]](*sys.argv[2:])  # Allows executing any function from CLI
+  ```
+  - Replaced with explicit whitelist of allowed CLI commands
+
 ## High Priority
+
+### Bug Fixes
+
+- [ ] **Fix null pointer crash in `blocks.py:56`**
+  - `occasional(sock)` called without checking if `occasional` is None
+  - Add `if occasional:` guard before the call
+
+- [ ] **Fix bare except clause in `blocks.py:225`**
+  - Catches `KeyboardInterrupt`/`SystemExit`, preventing graceful shutdown
+  - Change `except:` to `except Exception:`
+
+- [ ] **Fix `any()` misuse in `address.py:114`** (legacy module)
+  - `any(self.is_brandmeister_tg())` - `any()` on a boolean, not iterable
+  - Should be `return self.is_brandmeister_tg()`
 
 ### Testing & Quality
 
@@ -50,10 +74,22 @@ Remaining work items for pyM17 development.
 - [ ] **Consolidate address modules**
   - [ ] Deprecate `m17/address.py` in favor of `m17/core/address.py`
   - [ ] Add deprecation warnings to old imports
+  - [ ] Fix type hints in legacy `address.py:51` (accepts int|bytes, hints only bytes)
 
 - [ ] **Remove debug code**
   - [ ] Audit all modules for `print()` statements
   - [ ] Replace with proper `logging` module usage
+  - [ ] Remove hardcoded `logging.basicConfig(level=DEBUG)` in `network.py:18`
+
+- [ ] **Complete or remove stub functions**
+  - [ ] `blocks.py:238` - `throttle()` raises NotImplementedError
+  - [ ] `apps.py:37-45` - `m17_parrot()`, `m17_mirror()` are empty stubs
+  - [ ] `apps.py:108` - Reflector name parsing incomplete
+  - [ ] `network.py:65,68` - Packet frame and unknown message handling incomplete
+
+- [ ] **Fix silent failures**
+  - [ ] `frames/packet.py:276-280` - Invalid TLE data silently accepted (empty `pass` blocks)
+  - [ ] `__init__.py:85-106` - ImportErrors silently swallowed, hiding missing modules
 
 ### Documentation
 
@@ -133,7 +169,8 @@ Remaining work items for pyM17 development.
    for real-time decoding. Consider using numpy vectorization or Cython.
 
 2. **Network module debug code** - Some debug prints may still exist in
-   `m17/net/reflector.py`. Need full audit.
+   `m17/net/reflector.py`. Need full audit. Also `network.py:18` has hardcoded
+   `logging.basicConfig(level=DEBUG)`.
 
 3. **Audio module dependencies** - pycodec2 installation can be problematic
    on some platforms. Need to document build requirements.
@@ -144,6 +181,14 @@ Remaining work items for pyM17 development.
 5. **M17 v3.0.0 spec is WIP** - The v3.0.0 specification is still being finalized.
    Implementation may need updates when the spec is released. Track changes at
    the M17_spec repository dev branch.
+
+6. **Code style inconsistencies** - `while 1:` instead of `while True:` in
+   `blocks.py`. `raise (NotImplementedError)` with unnecessary parentheses
+   throughout several modules.
+
+7. **LSF/LICH code duplication** - `frames/lsf.py` and `frames/lich.py` both
+   represent the same 28-byte structure with conversion methods between them.
+   Creates maintenance burden.
 
 ## Completed
 
@@ -171,4 +216,4 @@ Remaining work items for pyM17 development.
 
 ---
 
-Last updated: 2026-01-18
+Last updated: 2026-01-19
