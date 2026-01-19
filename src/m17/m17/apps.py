@@ -341,7 +341,26 @@ def modular(config, chains):
 
 
 if __name__ == "__main__":
-    vars()[sys.argv[1]](*sys.argv[2:])
+    _CLI_COMMANDS = {
+        "m17_parrot": m17_parrot,
+        "m17_mirror": m17_mirror,
+        "udp_mirror": udp_mirror,
+        "udp_reflector": udp_reflector,
+        "m17ref_client": m17ref_client,
+        "voipsim": voipsim,
+        "to_icecast": to_icecast,
+        "to_pcm": to_pcm,
+        "recv_dump": recv_dump,
+        "voip": voip,
+        "echolink_bridge": echolink_bridge,
+        "m17_to_echolink": m17_to_echolink,
+        "modular": modular,
+    }
+    if len(sys.argv) < 2 or sys.argv[1] not in _CLI_COMMANDS:
+        print(f"Usage: python -m m17.apps <command> [args]")
+        print(f"Commands: {', '.join(_CLI_COMMANDS.keys())}")
+        sys.exit(1)
+    _CLI_COMMANDS[sys.argv[1]](*sys.argv[2:])
 
 """
 Good links I found:

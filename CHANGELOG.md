@@ -5,6 +5,16 @@ All notable changes to pyM17 will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Security
+
+- **Fixed arbitrary code execution vulnerability** in `misc.py` and `apps.py`
+  - `vars()[sys.argv[1]](*sys.argv[2:])` allowed running any function from CLI
+  - Replaced with explicit whitelist of allowed CLI commands
+
+---
+
 ## [0.1.2] - 2026-01-18
 
 ### Added
