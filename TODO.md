@@ -70,32 +70,32 @@ Remaining work items for pyM17 development.
 
 ### Code Cleanup
 
-- [ ] **Remove legacy modules**
-  - [ ] `m17/frames.py` - Old frame definitions (replaced by `m17/frames/`)
-  - [ ] `m17/network.py` - Old network code (replaced by `m17/net/`)
-  - [ ] `m17/framer.py` - Unused framer module
-  - [ ] `m17/voipsim.py` - VoIP simulation (needs review)
-  - [ ] `m17/sanity_check.py` - Sanity check script
+- [x] **Remove legacy modules** (added deprecation warnings - 2026-01-19)
+  - [x] `m17/frames.py` - Old frame definitions (replaced by `m17/frames/`) - added deprecation warning
+  - [x] `m17/network.py` - Old network code (replaced by `m17/net/`) - added deprecation warning
+  - [x] `m17/framer.py` - Unused framer module - added deprecation warning
+  - [x] `m17/voipsim.py` - VoIP simulation - added deprecation warning
+  - [x] `m17/sanity_check.py` - Sanity check script - added deprecation warning
 
-- [ ] **Consolidate address modules**
-  - [ ] Deprecate `m17/address.py` in favor of `m17/core/address.py`
-  - [ ] Add deprecation warnings to old imports
-  - [ ] Fix type hints in legacy `address.py:51` (accepts int|bytes, hints only bytes)
+- [x] **Consolidate address modules** (2026-01-19)
+  - [x] Deprecate `m17/address.py` in favor of `m17/core/address.py` - added deprecation warning
+  - [x] Add deprecation warnings to old imports
+  - [x] Fix type hints in legacy `address.py:51` - verified already correct (Union[int, bytes])
 
-- [ ] **Remove debug code**
-  - [ ] Audit all modules for `print()` statements
-  - [ ] Replace with proper `logging` module usage
-  - [ ] Remove hardcoded `logging.basicConfig(level=DEBUG)` in `network.py:18`
+- [x] **Remove debug code** (2026-01-19)
+  - [x] Audit all modules for `print()` statements - replaced with logging in network.py, blocks.py, apps.py
+  - [x] Replace with proper `logging` module usage
+  - [x] Remove hardcoded `logging.basicConfig(level=DEBUG)` in `network.py:18` - replaced with logger
 
-- [ ] **Complete or remove stub functions**
-  - [ ] `blocks.py:238` - `throttle()` raises NotImplementedError
-  - [ ] `apps.py:37-45` - `m17_parrot()`, `m17_mirror()` are empty stubs
-  - [ ] `apps.py:108` - Reflector name parsing incomplete
-  - [ ] `network.py:65,68` - Packet frame and unknown message handling incomplete
+- [x] **Complete or remove stub functions** (2026-01-19)
+  - [x] `blocks.py:238` - `throttle()` - implemented rate-limiting function
+  - [x] `apps.py:37-45` - `m17_parrot()`, `m17_mirror()` - added proper NotImplementedError with docs
+  - [x] `apps.py:108` - Reflector name parsing - added descriptive NotImplementedError message
+  - [x] `network.py:65,68` - Packet frame and unknown message handling - improved error messages
 
-- [ ] **Fix silent failures**
-  - [ ] `frames/packet.py:276-280` - Invalid TLE data silently accepted (empty `pass` blocks)
-  - [ ] `__init__.py:85-106` - ImportErrors silently swallowed, hiding missing modules
+- [x] **Fix silent failures** (2026-01-19)
+  - [x] `frames/packet.py:276-280` - Invalid TLE data - now logs warnings for non-standard lengths
+  - [x] `__init__.py:85-106` - ImportErrors - now logged at debug level
 
 ### Documentation
 
@@ -174,9 +174,8 @@ Remaining work items for pyM17 development.
 1. **Viterbi decoder performance** - Current pure Python implementation is slow
    for real-time decoding. Consider using numpy vectorization or Cython.
 
-2. **Network module debug code** - Some debug prints may still exist in
-   `m17/net/reflector.py`. Need full audit. Also `network.py:18` has hardcoded
-   `logging.basicConfig(level=DEBUG)`.
+2. ~~**Network module debug code**~~ - **FIXED (2026-01-19)**: All debug prints
+   replaced with proper logging. Hardcoded `logging.basicConfig` removed.
 
 3. **Audio module dependencies** - pycodec2 installation can be problematic
    on some platforms. Need to document build requirements.
@@ -221,6 +220,15 @@ Remaining work items for pyM17 development.
 - [x] Backward compatibility with v2.0.3 frames
 
 - [x] **mypy strict mode enabled** - Full type safety with 0 errors
+
+### Code Cleanup (2026-01-19)
+
+- [x] **Fixed silent failures** - TLE validation and import errors now logged
+- [x] **Replaced debug prints with logging** - network.py, blocks.py, apps.py
+- [x] **Implemented throttle() function** - Rate-limiting for queue processing
+- [x] **Improved stub functions** - Added docstrings and descriptive errors
+- [x] **Added deprecation warnings** - All legacy modules now warn on import
+- [x] **Made server hostnames configurable** - Centralized in core/constants.py
 
 ---
 

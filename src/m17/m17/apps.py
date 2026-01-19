@@ -6,6 +6,7 @@ This module contains example applications for M17 protocol.
 """
 from __future__ import annotations
 
+import logging
 import multiprocessing
 import sys
 import time
@@ -16,10 +17,12 @@ import m17.network
 from m17.const import DEFAULT_PORT
 from m17.misc import DictDotAttribute
 
+logger = logging.getLogger(__name__)
+
 
 def default_config(c2_mode: int) -> DictDotAttribute:
     c2, conrate, bitframe = m17.blocks.codec2setup(c2_mode)
-    print("conrate, bitframe = [%d,%d]" % (conrate, bitframe))
+    logger.debug("conrate, bitframe = [%d,%d]", conrate, bitframe)
 
     config = DictDotAttribute({
         "m17": {
@@ -39,18 +42,43 @@ def default_config(c2_mode: int) -> DictDotAttribute:
 
 
 def m17_parrot(refcallsign: str, port: Union[int, str] = DEFAULT_PORT) -> None:
-    # A parrot service for M17 - it's a full client that records and plays back after incoming stream is over PTT is released
-    port = int(port)
-    # udp_recv and udp_send are needed here, too.
-    ...
+    """
+    A parrot service for M17.
+
+    Records incoming streams and plays them back after the incoming stream
+    is complete (PTT released). Useful for testing audio quality.
+
+    Args:
+        refcallsign: The callsign for the parrot service.
+        port: UDP port to listen on.
+
+    Raises:
+        NotImplementedError: This function is not yet implemented.
+    """
+    raise NotImplementedError(
+        "m17_parrot is not yet implemented. "
+        "Required: recording buffer, stream end detection, playback logic."
+    )
 
 
 def m17_mirror(refcallsign: str, port: Union[int, str] = DEFAULT_PORT) -> None:
-    # reflects your M17 stream back to you after decoding and encoding
-    # can be useful for later transformations, like testing voice stream compatibilities
-    port = int(port)
-    # udp_recv and udp_send are needed here, too.
-    ...
+    """
+    Mirror service for M17.
+
+    Reflects your M17 stream back to you after decoding and re-encoding.
+    Useful for testing voice codec compatibility and audio transformations.
+
+    Args:
+        refcallsign: The callsign for the mirror service.
+        port: UDP port to listen on.
+
+    Raises:
+        NotImplementedError: This function is not yet implemented.
+    """
+    raise NotImplementedError(
+        "m17_mirror is not yet implemented. "
+        "Required: decode -> transform -> encode pipeline."
+    )
 
 
 def udp_mirror(refcallsign: str, port: Union[int, str] = DEFAULT_PORT) -> None:
@@ -127,10 +155,10 @@ def m17ref_client(
     if (refname.startswith("M17-") and len(refname) <= 7):
         # should also be able to look up registered port in dns
         host = m17.network.m17ref_name2host(refname)
-        print(host)
+        logger.debug("Resolved reflector host: %s", host)
         # fallback to fetching json if its not in dns already
     else:
-        raise NotImplementedError
+        raise NotImplementedError("Reflector name must start with 'M17-' and be <= 7 chars")
     myrefmod = "%s %s" % (mycall, mymodule)
     c = m17.blocks.M17ReflectorClientBlocks(myrefmod, module, host, port_int)
     tx_chain = [m17.blocks.mic_audio, m17.blocks.codec2enc, m17.blocks.vox, m17.blocks.m17frame, m17.blocks.tobytes,
@@ -140,7 +168,7 @@ def m17ref_client(
     config = default_config(mode_int)
     config.m17.dst = "%s %s" % (refname, module)
     config.m17.src = mycall
-    print(config)
+    logger.debug("Config: %s", config)
     c.start()
     modular(config, [tx_chain, rx_chain])
 
@@ -160,7 +188,7 @@ def voipsim(
                 m17.blocks.udp_send((host, port_int))]
     config.m17.dst = dst
     config.m17.src = src
-    print(config)
+    logger.debug("Config: %s", config)
     modular(config, [tx_chain])
 
 
@@ -230,7 +258,7 @@ def voip(
 
     config.m17.dst = dst
     config.m17.src = src
-    print(config)
+    logger.debug("Config: %s", config)
 
     modular(config, [tx_chain, rx_chain])
 
@@ -248,10 +276,10 @@ def echolink_bridge(
     if (refname.startswith("M17-") and len(refname) <= 7):
         # should also be able to look up registered port in dns
         host = m17.network.m17ref_name2host(refname)
-        print(host)
+        logger.debug("Resolved reflector host: %s", host)
         # fallback to fetching json if its not in dns already
     else:
-        raise NotImplementedError
+        raise NotImplementedError("Reflector name must start with 'M17-' and be <= 7 chars")
     myrefmod = "%s %s" % (mycall, mymodule)
     c = m17.blocks.M17ReflectorClientBlocks(myrefmod, refmodule, host, refport_int)
     echolink_to_m17ref = [m17.blocks.udp_recv(55501), m17.blocks.chunker_b(640), m17.blocks.np_convert("<h"),
@@ -263,7 +291,7 @@ def echolink_bridge(
     config = default_config(mode_int)
     config.m17.dst = "%s %s" % (refname, refmodule)
     config.m17.src = mycall
-    print(config)
+    logger.debug("Config: %s", config)
     c.start()
     modular(config, [echolink_to_m17ref, m17ref_to_echolink])
 
@@ -380,15 +408,15 @@ def modular(config: DictDotAttribute, chains: List[List[Any]]) -> None:
         procs = modules['processes']
         while 1:
             if any(not p['process'].is_alive() for p in procs):
-                print("lost a client process")
+                logger.warning("Lost a client process")
                 break
             time.sleep(.05)
         # I can see where this is going to need to change
         # it's fine for now, but a real server will need something different
     except KeyboardInterrupt:
-        print("Got ^C, ")
+        logger.info("Received interrupt signal")
     finally:
-        print("closing down")
+        logger.info("Closing down")
         for proc in procs:
             # messy
             # TODO make a rwlock for indicating shutdown

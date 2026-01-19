@@ -21,6 +21,7 @@ from enum import IntEnum
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from m17.core.address import Address
+from m17.core.constants import DEFAULT_PRIMARY_HOST, DEFAULT_PORT
 from m17.frames.ip import IPFrame
 
 __all__ = [
@@ -83,9 +84,9 @@ class P2PManager:
     """
 
     callsign: str
-    port: int = 17000
+    port: int = DEFAULT_PORT
     primaries: List[Tuple[str, int]] = field(
-        default_factory=lambda: [("m17.tarxvf.tech", 17000)]
+        default_factory=lambda: [(DEFAULT_PRIMARY_HOST, DEFAULT_PORT)]
     )
 
     _sock: Optional[socket.socket] = field(default=None, init=False)

@@ -13,12 +13,15 @@ Supports M17 v2.0.3 and v3.0.0 (with TLE packet type).
 
 from __future__ import annotations
 
+import logging
 import struct
 from dataclasses import dataclass, field
 from typing import Iterator, List, Optional
 from enum import IntEnum
 
 from m17.core.crc import crc_m17
+
+logger = logging.getLogger(__name__)
 from m17.core.constants import (
     PACKET_PROTOCOL_RAW,
     PACKET_PROTOCOL_AX25,
@@ -272,12 +275,19 @@ class TLEPacket:
 
     def __post_init__(self) -> None:
         """Validate TLE data."""
-        # Basic validation
+        # Basic validation - warn about non-standard line lengths
         if self.tle_line1 and len(self.tle_line1) != self._TLE_LINE_LENGTH:
-            # Allow non-standard lengths but warn in production
-            pass
+            logger.warning(
+                "TLE line 1 has non-standard length: %d (expected %d)",
+                len(self.tle_line1),
+                self._TLE_LINE_LENGTH,
+            )
         if self.tle_line2 and len(self.tle_line2) != self._TLE_LINE_LENGTH:
-            pass
+            logger.warning(
+                "TLE line 2 has non-standard length: %d (expected %d)",
+                len(self.tle_line2),
+                self._TLE_LINE_LENGTH,
+            )
 
     @property
     def is_valid(self) -> bool:

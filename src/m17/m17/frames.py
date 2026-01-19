@@ -1,12 +1,33 @@
 """
-M17 frames
+M17 frames (Legacy Module)
+
+.. deprecated:: 1.0.0
+    This module is deprecated. Use the :mod:`m17.frames` package instead.
+
+    Example migration::
+
+        # Old imports (deprecated)
+        from m17.frames import M17Payload, LICHFrame, IPFrame
+
+        # New imports (preferred)
+        from m17.frames import M17Payload, LICHFrame, IPFrame
+        # (These are re-exported from m17.frames package for compatibility)
 """
 import struct
+import warnings
 from typing import Union
 
 from m17 import const as m17_const
 from m17.address import Address
 from m17.misc import print_hex, chunk
+
+# Emit deprecation warning on module import
+warnings.warn(
+    "Direct import from m17.frames (the legacy module) is deprecated. "
+    "The m17/frames/ package provides the same classes with modern implementations.",
+    DeprecationWarning,
+    stacklevel=2,
+)
 
 M17PayloadLayout = struct.Struct(m17_const.M17_PAYLOAD_LAYOUT_STRUCT)
 

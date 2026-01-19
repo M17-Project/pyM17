@@ -1,8 +1,18 @@
 """
-M17 Networking (Legacy)
+M17 Networking (Legacy Module)
 
 This module contains legacy networking code for M17.
-Refactored versions are in m17/net/ subpackage.
+
+.. deprecated:: 1.0.0
+    This module is deprecated. Use the :mod:`m17.net` package instead.
+
+    Example migration::
+
+        # Old import (deprecated)
+        from m17.network import n7tae_reflector_conn
+
+        # New import (preferred)
+        from m17.net.reflector import ReflectorClient
 """
 from __future__ import annotations
 
@@ -15,6 +25,7 @@ import socket
 import sys
 import threading
 import time
+import warnings
 from typing import Any, Awaitable, Callable, Dict, List, Optional, Tuple, Union
 
 from kademlia.network import Server
@@ -23,19 +34,33 @@ import m17
 import m17.address
 import m17.misc
 from m17.misc import DictDotAttribute
+from m17.core.constants import (
+    DEFAULT_PORT,
+    DEFAULT_DHT_PORT,
+    DEFAULT_PRIMARY_HOST,
+    DEFAULT_DHT_BOOTSTRAP_HOSTS,
+    get_reflector_host,
+)
 
-logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
+logger = logging.getLogger(__name__)
 
-primaries: List[Tuple[str, int]] = [("m17.tarxvf.tech.", 17000)]
-dhtbootstraps: List[Tuple[str, int]] = [("m17dhtboot0.tarxvf.tech.", 17001)]
+# Emit deprecation warning on module import
+warnings.warn(
+    "m17.network is deprecated and will be removed in v2.0. "
+    "Use the m17.net package instead.",
+    DeprecationWarning,
+    stacklevel=2,
+)
+
+primaries: List[Tuple[str, int]] = [(f"{DEFAULT_PRIMARY_HOST}.", DEFAULT_PORT)]
+dhtbootstraps: List[Tuple[str, int]] = [
+    (f"{host}.", DEFAULT_DHT_PORT) for host in DEFAULT_DHT_BOOTSTRAP_HOSTS
+]
 
 
 def m17ref_name2host(refname: str) -> str:
-    return "%s.m17ref.tarxvf.tech" % (refname)
-
-
-# def m17ref_name2dict(refname):
-# return "%s.m17ref.tarxvf.tech"%(refname)
+    """Convert a reflector name to a hostname."""
+    return get_reflector_host(refname)
 
 class n7tae_reflector_conn:
     def __init__(
@@ -50,7 +75,7 @@ class n7tae_reflector_conn:
         self.conn = conn
         self.mycallsign = mycallsign
         self.mycall_b = bytes(m17.address.Address(callsign=self.mycallsign))
-        print("MYCALL=%s" % (self.mycallsign))
+        logger.debug("MYCALL=%s", self.mycallsign)
 
     def connect(self) -> None:
         data = b"CONN" + self.mycall_b + self.module.encode("ascii")
@@ -65,7 +90,7 @@ class n7tae_reflector_conn:
         self.send(data)
 
     def send(self, data: bytes) -> None:
-        print("TAE SEND:", data)
+        logger.debug("TAE SEND: %s", data)
         self.sock.sendto(data, self.conn)
 
     def handle(self, pkt: bytes, conn: Tuple[str, int]) -> None:
@@ -77,10 +102,10 @@ class n7tae_reflector_conn:
             self.disco()
             raise Exception("Refused by reflector")
         elif pkt.startswith(b"CONN"):
-            raise NotImplementedError
+            raise NotImplementedError("CONN packet handling not implemented")
         else:
-            print(pkt)
-            raise NotImplementedError
+            logger.warning("Unhandled packet type: %s", pkt)
+            raise NotImplementedError(f"Unhandled packet type: {pkt[:4]!r}")
 
 
 class msgtype(enum.Enum):
@@ -144,13 +169,13 @@ class m17_networking_direct:
         while 1:
             try:
                 data, conn = self.sock.recvfrom(1500)
-                print("RECV", conn, data)
+                logger.debug("RECV %s %s", conn, data)
                 recvq.put((data, conn))
             except BlockingIOError:
                 pass
             if not sendq.empty():
                 data, conn = sendq.get_nowait()
-                print("SEND", conn, data)
+                logger.debug("SEND %s %s", conn, data)
                 self.sock.sendto(data, conn)
             time.sleep(.0001)
 
@@ -171,13 +196,13 @@ class m17_networking_direct:
         self.registration_keepalive()
         if not self.recvQ.empty():
             data, conn = self.recvQ.get_nowait()
-            print("Recv:", data, conn)
+            logger.debug("Recv: %s %s", data, conn)
             if conn[0] not in self.conns:
                 self.conns[conn] = DictDotAttribute({
                     "last": time.time(),
                     "conn": conn,
                 })
-                print(self.conns)
+                logger.debug("New connection: %s", self.conns)
             else:
                 self.conns[conn[0]].last = time.time()
             self.process_packet(data, conn)
@@ -204,7 +229,7 @@ class m17_networking_direct:
                 lastseen, theirconn = self.reg_fetch(callsign)
                 self.answer_where_is(conn, callsign, theirconn)
             elif msg.msgtype == msgtype.is_at:
-                print("Found %s at %s!" % (msg.callsign, msg.host))
+                logger.info("Found %s at %s", msg.callsign, msg.host)
                 self.reg_store(msg.callsign, (msg.host, msg.port))
 
             elif msg.msgtype == msgtype.introduce_me:
@@ -212,13 +237,10 @@ class m17_networking_direct:
             elif msg.msgtype == msgtype.introducing:
                 self.attempt_rendezvous(conn, msg)
             elif msg.msgtype == msgtype.hi:
-                print("Got a holepunch packet from %s!" % (str(conn)))
+                logger.info("Got a holepunch packet from %s", conn)
                 self.reg_store(msg.callsign, conn)
         else:
-            print("payload unrecognized")
-            print("payload = ", payload)
-            import pdb;
-            pdb.set_trace()
+            logger.warning("Unrecognized payload: %s", payload)
 
     def reg_fetch(self, callsign: str) -> Tuple[float, Tuple[str, int]]:
         """Fetch registration by callsign."""
@@ -254,7 +276,7 @@ class m17_networking_direct:
         self.M17J_send(payload, server)
 
     def reg_store(self, callsign: str, conn: Tuple[str, int]) -> None:
-        print("[M17 registration] %s -> %s" % (callsign, conn))
+        logger.debug("[M17 registration] %s -> %s", callsign, conn)
         self.whereis[callsign] = (time.time(), conn)
         self.whereis[conn] = (time.time(), callsign)
 
@@ -414,10 +436,10 @@ class m17_networking_dht:
     async def run(self) -> None:
         await self.node.listen(self.port)
         if self.should_boot:
-            await self.node.bootstrap([
-                ("m17dhtboot0.tarxvf.tech", 17001),
-                # ("m17dhtboot1.tarxvf.tech", 17001)
-            ])
+            bootstrap_nodes = [
+                (host, DEFAULT_DHT_PORT) for host in DEFAULT_DHT_BOOTSTRAP_HOSTS
+            ]
+            await self.node.bootstrap(bootstrap_nodes)
         t1 = asyncio.ensure_future(repeat(15, self.register_me))
         t2 = asyncio.ensure_future(repeat(15, self.check))
 
@@ -425,7 +447,7 @@ class m17_networking_dht:
         for c in ["", "-M", "-T", "-F"]:
             call = "W2FBI" + c
             x = await self.node.get(call)
-            print(call, x)
+            logger.debug("DHT check: %s -> %s", call, x)
 
     async def register_me(self) -> None:
         me = [self.host, self.port]
@@ -457,7 +479,7 @@ if __name__ == "__main__":
         loop.run_until_complete(server.listen(8468))
         try:
             while 1:
-                print("test")
+                logger.debug("DHT server loop iteration")
                 loop_once(loop)
                 time.sleep(.5)
             # loop.run_forever()
@@ -484,12 +506,9 @@ if __name__ == "__main__":
             portnum = 17000
         else:
             portnum = (int.from_bytes(m17.address.Address.encode(callsign), "big") % 32767) + 32767
-        print(portnum)
+        logger.info("Starting direct networking on port %d", portnum)
         direct_net = m17_networking_direct(primaries, callsign=callsign, port=portnum)
         direct_net.loop()
-        import pdb;
-
-        pdb.set_trace()
 
     # x.callsign_connect("W2FBI") #this is how you do an automatic udp hole punch.
     # #Registers the connection and maintains keepalives with that host. They should do the same.

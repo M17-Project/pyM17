@@ -3,6 +3,7 @@ blocks.py
 """
 from __future__ import annotations
 
+import logging
 import multiprocessing
 import queue
 import random
@@ -17,6 +18,8 @@ import numpy.typing as npt
 from m17.misc import print_hex, chunk, DictDotAttribute
 from m17 import Address, IPFrame, M17IPFramer
 from m17 import network
+
+logger = logging.getLogger(__name__)
 
 
 # Type aliases for block functions
@@ -130,7 +133,7 @@ class M17ReflectorClientBlocks:
         while 1:
             try:
                 bs, conn = sock.recvfrom(1500)
-                print("RECV", bs)
+                logger.debug("RECV %s", bs)
                 if bs.startswith(b"M17 "):
                     recvq.put(bs)  # could also hand conn along later
                 else:
@@ -139,7 +142,7 @@ class M17ReflectorClientBlocks:
                 pass
             if not sendq.empty():
                 data = sendq.get_nowait()
-                print("SEND", data)
+                logger.debug("SEND %s", data)
                 sock.sendto(data, conn)
             time.sleep(.000001)
 
@@ -184,9 +187,9 @@ def null(config: Any, inq: "multiprocessing.Queue[Any]", outq: "multiprocessing.
 
 def tee(header: str) -> BlockFunction:
     """
-    Print incoming items to screen before putting them on the next q
-    bytes get printed as hex strings
-    "header" parameter gets printed with each queue element to differentiate multiple tee()s
+    Log incoming items before putting them on the next q.
+    bytes get logged as hex strings.
+    "header" parameter gets logged with each queue element to differentiate multiple tee()s.
     named like standard UNIX tee(1)
     """
 
@@ -194,16 +197,18 @@ def tee(header: str) -> BlockFunction:
         while 1:
             x = inq.get()
             if type(x) == type(b""):
-                print(header, print_hex(x))
+                logger.debug("%s %s", header, print_hex(x))
             else:
-                print(header, x)
+                logger.debug("%s %s", header, x)
             outq.put(x)
 
     return fn
 
 
 def ffmpeg(ffmpeg_url: str) -> BlockFunction:
-    ffmpeg_url_example = "icecast://source:m17@m17tester.tarxvf.tech:876/live.ogg"
+    # Example URL format (uses DEFAULT_TEST_HOST from m17.core.constants):
+    # ffmpeg_url_example = f"icecast://source:m17@{DEFAULT_TEST_HOST}:876/live.ogg"
+    _ = ffmpeg_url  # Used via closure
 
     def fn(config: Any, inq: "multiprocessing.Queue[Any]", outq: "multiprocessing.Queue[Any]") -> NoReturn:
         from subprocess import Popen, PIPE
@@ -257,8 +262,27 @@ def throttle(n_per_second: float) -> BlockFunction:
     a specified rate in q elements per second. As "no more than" might
     suggest, this is setting a maximum, not a minimum. Minimum is based
     on your hardware and a number of other factors.
+
+    Args:
+        n_per_second: Maximum elements per second to pass through.
+
+    Returns:
+        A block function that rate-limits queue elements.
     """
-    raise NotImplementedError  # TODO
+    interval = 1.0 / n_per_second
+
+    def fn(config: Any, inq: "multiprocessing.Queue[Any]", outq: "multiprocessing.Queue[Any]") -> NoReturn:
+        last_send = 0.0
+        while 1:
+            x = inq.get()
+            now = time.time()
+            elapsed = now - last_send
+            if elapsed < interval:
+                time.sleep(interval - elapsed)
+            outq.put(x)
+            last_send = time.time()
+
+    return fn
 
 
 def delay(size: int) -> BlockFunction:
@@ -394,8 +418,7 @@ def m17frame(config: Any, inq: "multiprocessing.Queue[Any]", outq: "multiprocess
     """
     dst = Address(callsign=config.m17.dst)
     src = Address(callsign=config.m17.src)
-    print(dst)
-    print(src)
+    logger.debug("M17 frame: dst=%s, src=%s", dst, src)
     framer = M17IPFramer(
         stream_id=random.randint(1, 2 ** 16 - 1),
         dst=dst,
@@ -423,7 +446,7 @@ def m17parse(config: Any, inq: "multiprocessing.Queue[Any]", outq: "multiprocess
     while 1:
         f = IPFrame.from_bytes(inq.get())
         if "verbose" in config and config.verbose:
-            print(f)
+            logger.debug("Parsed M17 frame: %s", f)
         outq.put(f)
 
 

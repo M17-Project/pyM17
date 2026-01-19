@@ -1,15 +1,35 @@
 """
-M17 Addressing
+M17 Addressing (Legacy Module)
+
+.. deprecated:: 1.0.0
+    This module is deprecated. Use :mod:`m17.core.address` instead.
+
+    Example migration::
+
+        # Old import (deprecated)
+        from m17.address import Address
+
+        # New import (preferred)
+        from m17.core.address import Address
 """
 from __future__ import annotations
 
 import sys
 import struct
+import warnings
 from typing import Any, Optional, Union
 
 
 from m17.const import CALLSIGN_ALPHABET, M17_ADDRESS_LAYOUT_STRUCT
 M17AddressLayout = struct.Struct(M17_ADDRESS_LAYOUT_STRUCT)
+
+# Emit deprecation warning on module import
+warnings.warn(
+    "m17.address is deprecated and will be removed in v2.0. "
+    "Use m17.core.address instead.",
+    DeprecationWarning,
+    stacklevel=2,
+)
 
 
 AddressParam = Union[int, bytes]

@@ -30,7 +30,11 @@ For more details, see the submodules:
 - m17.audio: Audio processing
 """
 
+import logging
+
 __version__ = "1.0.0"
+
+logger = logging.getLogger(__name__)
 
 # =============================================================================
 # Modern API - New module structure
@@ -84,8 +88,8 @@ from m17.frames import (
 # Import old modules to ensure backward compatibility
 try:
     from m17.address import Address as _LegacyAddress
-except ImportError:
-    pass
+except ImportError as e:
+    logger.debug("Legacy m17.address module not available: %s", e)
 
 try:
     from m17.frames import (
@@ -94,16 +98,18 @@ try:
         IPFrame as _LegacyIPFrame,
         M17Payload as _LegacyM17Payload,
     )
-except ImportError:
+except ImportError as e:
     # If old frames module fails, RegularFrame comes from new module
+    logger.debug("Legacy m17.frames imports not available, using StreamFrame: %s", e)
     RegularFrame = StreamFrame
 
 try:
     from m17.framer import M17IPFramer, M17RFFramer
-except ImportError:
+except ImportError as e:
     # Provide stub implementations if framer not available
-    M17IPFramer = None
-    M17RFFramer = None
+    logger.debug("m17.framer module not available: %s", e)
+    M17IPFramer = None  # type: ignore[assignment, misc]
+    M17RFFramer = None  # type: ignore[assignment, misc]
 
 # =============================================================================
 # Public API

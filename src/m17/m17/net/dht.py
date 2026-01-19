@@ -23,6 +23,8 @@ except ImportError:
     HAS_KADEMLIA = False
     Server = None
 
+from m17.core.constants import DEFAULT_DHT_BOOTSTRAP_HOSTS, DEFAULT_DHT_PORT
+
 __all__ = [
     "M17DHTNode",
     "DHTConfig",
@@ -31,9 +33,9 @@ __all__ = [
 
 logger = logging.getLogger(__name__)
 
-# Default bootstrap nodes
+# Default bootstrap nodes (from m17.core.constants)
 DEFAULT_BOOTSTRAP_NODES: List[Tuple[str, int]] = [
-    ("m17dhtboot0.tarxvf.tech", 17001),
+    (host, DEFAULT_DHT_PORT) for host in DEFAULT_DHT_BOOTSTRAP_HOSTS
 ]
 
 

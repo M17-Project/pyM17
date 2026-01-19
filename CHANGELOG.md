@@ -24,6 +24,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Fixed `any()` misuse in `address.py:114`**
   - Removed incorrect `any()` wrapper around boolean return
 
+- **Fixed silent failures**
+  - `frames/packet.py` - Invalid TLE data now logs warnings instead of silent `pass`
+  - `__init__.py` - ImportErrors now logged at debug level instead of swallowed
+
 ### Changed
 
 - **Enabled mypy strict mode** - Full type safety enforcement
@@ -32,6 +36,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Reduced mypy errors from 304 to 0
   - Per-module overrides for optional modules (net/*, audio/*) that depend on external packages without type stubs
   - Per-module overrides for frames modules with complex Union[str, Address] typing patterns
+
+- **Replaced debug print statements with proper logging**
+  - `network.py` - All `print()` calls replaced with `logger.debug/info/warning`
+  - `blocks.py` - Debug output now uses logging module
+  - `apps.py` - Configuration and status messages use logging
+  - Removed hardcoded `logging.basicConfig(level=DEBUG)` from `network.py`
+
+- **Made server hostnames configurable** (`core/constants.py`)
+  - Added `DEFAULT_PRIMARY_HOST` - Primary M17 server
+  - Added `DEFAULT_DHT_BOOTSTRAP_HOSTS` - DHT bootstrap servers
+  - Added `DEFAULT_REFLECTOR_DOMAIN` - Reflector domain suffix
+  - Added `DEFAULT_TEST_HOST` - Test server for examples
+  - Added `get_reflector_host()` helper function
+  - Updated all modules to use configurable constants instead of hardcoded hostnames
+
+- **Implemented `throttle()` function in `blocks.py`**
+  - Previously raised `NotImplementedError`
+  - Now provides rate-limiting for queue elements
+
+- **Improved stub function documentation**
+  - `m17_parrot()` and `m17_mirror()` now have proper docstrings and descriptive `NotImplementedError`
+  - `NotImplementedError` messages throughout now include context
 
 ### Added
 
@@ -44,6 +70,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `test_lich.py` - LICH handling tests (98% coverage)
   - `test_blocks.py` - Audio processing blocks tests
   - `test_integration.py` - Full FEC pipeline and frame roundtrip tests
+
+- **Network configuration constants** (`core/constants.py`)
+  - `DEFAULT_DHT_PORT` (17001)
+  - Server hostname constants for easy configuration
+
+### Deprecated
+
+- **Legacy modules now emit deprecation warnings**
+  - `m17/address.py` → use `m17/core/address.py`
+  - `m17/frames.py` → use `m17/frames/` package
+  - `m17/network.py` → use `m17/net/` package
+  - `m17/framer.py` → use frame classes directly
+  - `m17/voipsim.py` → use `python -m m17.apps voipsim`
+  - `m17/sanity_check.py` → use `poetry install -E audio`
 
 ---
 
