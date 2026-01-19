@@ -16,36 +16,38 @@ Remaining work items for pyM17 development.
 
 ### Bug Fixes
 
-- [ ] **Fix null pointer crash in `blocks.py:56`**
+- [x] **Fix null pointer crash in `blocks.py:56`**
   - `occasional(sock)` called without checking if `occasional` is None
-  - Add `if occasional:` guard before the call
+  - Added `if occasional:` guard before the call
 
-- [ ] **Fix bare except clause in `blocks.py:225`**
+- [x] **Fix bare except clause in `blocks.py:225`**
   - Catches `KeyboardInterrupt`/`SystemExit`, preventing graceful shutdown
-  - Change `except:` to `except Exception:`
+  - Changed `except:` to `except Exception:`
 
-- [ ] **Fix `any()` misuse in `address.py:114`** (legacy module)
+- [x] **Fix `any()` misuse in `address.py:114`** (legacy module)
   - `any(self.is_brandmeister_tg())` - `any()` on a boolean, not iterable
-  - Should be `return self.is_brandmeister_tg()`
+  - Changed to `return self.is_brandmeister_tg()`
 
 ### Testing & Quality
 
-- [ ] **Increase test coverage** - Current: 35%, Target: 80%+
-  - [ ] Add tests for `m17/codec/viterbi.py` (21% coverage)
-  - [ ] Add tests for `m17/codec/puncture.py` (28% coverage)
-  - [ ] Add tests for `m17/codec/randomize.py` (34% coverage)
-  - [ ] Add tests for `m17/codec/convolutional.py` (20% coverage)
+- [ ] **Increase test coverage** - Current: 43%, Target: 80%+
+  - [x] Add tests for `m17/codec/viterbi.py` (now 100% coverage)
+  - [x] Add tests for `m17/codec/puncture.py` (now 100% coverage)
+  - [x] Add tests for `m17/codec/randomize.py` (now 100% coverage)
+  - [x] Add tests for `m17/codec/convolutional.py` (now 98% coverage)
   - [ ] Add tests for `m17/net/` modules (0% coverage)
   - [x] Add tests for `m17/frames/packet.py` (78% coverage) - TLE tests added
+  - [x] Add tests for `m17/frames/stream.py` (now 98% coverage)
+  - [x] Add tests for `m17/frames/lich.py` (now 98% coverage)
 
 - [ ] **Run mypy strict mode** - Fix all type errors
   ```bash
   mypy m17/ --strict
   ```
 
-- [ ] **Integration tests**
-  - [ ] Full FEC encode/decode roundtrip test
-  - [ ] Frame serialization/deserialization with actual M17 data
+- [x] **Integration tests**
+  - [x] Full FEC encode/decode roundtrip test
+  - [x] Frame serialization/deserialization with actual M17 data
   - [ ] Network client connection tests (with mocked server)
 
 ### Interoperability

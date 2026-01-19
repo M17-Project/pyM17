@@ -111,9 +111,7 @@ class Address:
         """
         Is this a DMR talkgroup?
         """
-        return any(
-            self.is_brandmeister_tg()
-        )
+        return self.is_brandmeister_tg()
 
     def is_brandmeister_tg(self):
         """

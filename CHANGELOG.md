@@ -13,6 +13,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `vars()[sys.argv[1]](*sys.argv[2:])` allowed running any function from CLI
   - Replaced with explicit whitelist of allowed CLI commands
 
+### Fixed
+
+- **Fixed null pointer crash in `blocks.py:56`**
+  - Added null check for `occasional` callback parameter
+
+- **Fixed bare except clause in `blocks.py:225`**
+  - Changed to `except Exception:` to allow graceful shutdown
+
+- **Fixed `any()` misuse in `address.py:114`**
+  - Removed incorrect `any()` wrapper around boolean return
+
+### Added
+
+- **Comprehensive test suite** - 348 tests, coverage improved from 35% to 43%
+  - `test_viterbi.py` - Viterbi decoder tests (100% coverage)
+  - `test_convolutional.py` - Convolutional encoder tests (98% coverage)
+  - `test_puncture.py` - Puncture pattern tests (100% coverage)
+  - `test_randomize.py` - Randomizer tests (100% coverage)
+  - `test_stream.py` - Stream frame tests (98% coverage)
+  - `test_lich.py` - LICH handling tests (98% coverage)
+  - `test_blocks.py` - Audio processing blocks tests
+  - `test_integration.py` - Full FEC pipeline and frame roundtrip tests
+
 ---
 
 ## [0.1.2] - 2026-01-18
