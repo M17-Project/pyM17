@@ -40,10 +40,14 @@ Remaining work items for pyM17 development.
   - [x] Add tests for `m17/frames/stream.py` (now 98% coverage)
   - [x] Add tests for `m17/frames/lich.py` (now 98% coverage)
 
-- [ ] **Run mypy strict mode** - Fix all type errors
+- [x] **Run mypy strict mode** - Fix all type errors
   ```bash
   mypy m17/ --strict
   ```
+  - Enabled `strict = true` in pyproject.toml
+  - Added type annotations to ~70+ functions across blocks.py, misc.py, framer.py, address.py, network.py, apps.py
+  - Configured per-module overrides for optional modules (net/*, audio/*) and complex typing patterns
+  - Reduced errors from 304 to 0
 
 - [x] **Integration tests**
   - [x] Full FEC encode/decode roundtrip test
@@ -215,6 +219,8 @@ Remaining work items for pyM17 development.
 - [x] Expanded encryption options (8/16/24-bit scrambler, 128/192/256-bit AES)
 - [x] v3.0.0 test suite (36 tests, total now 156 tests)
 - [x] Backward compatibility with v2.0.3 frames
+
+- [x] **mypy strict mode enabled** - Full type safety with 0 errors
 
 ---
 

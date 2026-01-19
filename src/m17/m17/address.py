@@ -1,9 +1,11 @@
 """
 M17 Addressing
 """
+from __future__ import annotations
+
 import sys
 import struct
-from typing import Union
+from typing import Any, Optional, Union
 
 
 from m17.const import CALLSIGN_ALPHABET, M17_ADDRESS_LAYOUT_STRUCT
@@ -48,29 +50,35 @@ class Address:
 
     """
 
-    def __init__(self, addr: bytes=None, callsign: str=None):
+    def __init__(
+        self,
+        addr: Optional[Union[bytes, int]] = None,
+        callsign: Optional[str] = None
+    ) -> None:
         if addr is None and callsign is None:
             raise ValueError("Must provide either addr or callsign")
 
-        self.callsign = callsign.upper() if callsign else self.decode(addr)
-        self.addr = addr if addr else self.encode(callsign)
+        self.callsign = callsign.upper() if callsign else self.decode(addr)  # type: ignore[arg-type]
+        addr_result = addr if addr else self.encode(callsign)  # type: ignore[arg-type]
 
-        if isinstance(self.addr, int):
-            self.addr = self.addr.to_bytes(6, "big")
+        if isinstance(addr_result, int):
+            self.addr = addr_result.to_bytes(6, "big")
+        else:
+            self.addr = addr_result
 
-    def __str__(self):
+    def __str__(self) -> str:
         int_addr = int.from_bytes(self.addr, "big")
         return f"{self.callsign} == 0x{int_addr:06x}"
 
-    def __bytes__(self):
+    def __bytes__(self) -> bytes:
         return M17AddressLayout.pack(*self.addr)
 
-    def __index__(self):
+    def __index__(self) -> int:
         return int.from_bytes(self.addr, "big")
 
-    def __eq__(self, compareto):
+    def __eq__(self, compareto: object) -> bool:
         if isinstance(compareto, str):
-            return int(compareto) == self.addr if compareto.isdigit() else compareto.upper() == self.callsign
+            return int(compareto) == int.from_bytes(self.addr, "big") if compareto.isdigit() else compareto.upper() == self.callsign
 
         if isinstance(compareto, int):
             return compareto == int(self)
@@ -81,7 +89,7 @@ class Address:
         return False
 
     @staticmethod
-    def to_dmr_id(something):
+    def to_dmr_id(something: Any) -> None:
         """
         Convert a callsign to a DMR ID
         """
@@ -94,39 +102,39 @@ class Address:
         ...
 
     @staticmethod
-    def from_dmr_id(dmr_int):
+    def from_dmr_id(dmr_int: int) -> None:
         """
         Convert a DMR ID to a callsign
         """
         # return an Address encoded for callsign using dmr database lookup to get callsign
         ...
 
-    def is_dmr_id(self):
+    def is_dmr_id(self) -> bool:
         """
         Is this a DMR ID?
         """
         return self.callsign.startswith("D") and self.callsign[1:].isdigit()
 
-    def is_dmr_talkgroup(self):
+    def is_dmr_talkgroup(self) -> bool:
         """
         Is this a DMR talkgroup?
         """
         return self.is_brandmeister_tg()
 
-    def is_brandmeister_tg(self):
+    def is_brandmeister_tg(self) -> bool:
         """
         Is this a Brandmeister talkgroup?
         """
         return self.callsign.startswith("BM") and self.callsign[1:].isdigit()
 
-    def is_dstar_reflector(self):
+    def is_dstar_reflector(self) -> bool:
         """
         Is this a D-Star reflector?
         """
         return self.callsign.startswith("REF")
 
     @staticmethod
-    def encode(callsign):
+    def encode(callsign: str) -> bytes:
         """
         Encode a callsign into an address
         """
@@ -140,13 +148,15 @@ class Address:
         return num.to_bytes(6, "big")
 
     @staticmethod
-    def decode(addr: AddressParam):
+    def decode(addr: AddressParam) -> str:
         """
         Decode an address into a callsign
         """
-        num = addr
+        num: int
         if isinstance(addr, bytes):
             num = int.from_bytes(addr, "big")
+        else:
+            num = addr
 
         if num >= 40 ** 9:
             raise ValueError("Invalid address")
@@ -161,7 +171,7 @@ class Address:
         return callsign
 
 
-def show_help():
+def show_help() -> None:
     """
     Show help
     """

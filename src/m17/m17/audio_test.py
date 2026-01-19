@@ -2,7 +2,10 @@
 Provides a test of the soundcard library. It will record from the default microphone and
  play back to the default speaker.
 """
+from __future__ import annotations
+
 import sys
+from typing import NoReturn, Union
 
 import soundcard as sc
 
@@ -12,15 +15,15 @@ except Exception as exc:
     raise ImportError("pycodec2 is required for this test.") from exc
 
 
-def audio_test_soundcard(mode):
+def audio_test_soundcard(mode: Union[int, str]) -> NoReturn:
     """
     Test the soundcard library.
     """
 
-    mode = int(mode)
-    c2 = pycodec2.Codec2(mode)
-    conrate = c2.samples_per_frame()
-    bitframe = c2.bits_per_frame()
+    mode_int = int(mode)
+    c2 = pycodec2.Codec2(mode_int)
+    conrate: int = c2.samples_per_frame()
+    bitframe: int = c2.bits_per_frame()
     pa_rate = 8000
 
     default_mic = sc.default_microphone()

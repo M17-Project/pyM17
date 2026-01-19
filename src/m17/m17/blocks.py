@@ -1,25 +1,34 @@
 """
 blocks.py
 """
+from __future__ import annotations
+
 import multiprocessing
 import queue
 import random
 import socket
 import sys
 import time
+from typing import Any, Callable, Dict, List, NoReturn, Optional, Tuple, Union
+
 import numpy
+import numpy.typing as npt
 
-
-from m17.misc import print_hex, chunk
+from m17.misc import print_hex, chunk, DictDotAttribute
 from m17 import Address, IPFrame, M17IPFramer
 from m17 import network
 
 
-def codeblock(callback):
+# Type aliases for block functions
+BlockFunction = Callable[[Any, "multiprocessing.Queue[Any]", "multiprocessing.Queue[Any]"], None]
+NDArrayInt16 = npt.NDArray[numpy.int16]
+
+
+def codeblock(callback: Callable[[Any], Any]) -> BlockFunction:
     """
     wrap a callback in a block that can be used in the processing chain
     """
-    def fn(config, inq, outq):
+    def fn(config: Any, inq: "multiprocessing.Queue[Any]", outq: "multiprocessing.Queue[Any]") -> NoReturn:
         """
         the block itself
         """
@@ -31,19 +40,23 @@ def codeblock(callback):
     return fn
 
 
-def udp_server(port, packet_handler, occasional=None):
+def udp_server(
+    port: int,
+    packet_handler: Callable[[socket.socket, Dict[Tuple[str, int], float], bytes, Tuple[str, int]], None],
+    occasional: Optional[Callable[[socket.socket], None]] = None
+) -> Callable[[], NoReturn]:
     """
     not meant to be used in a chain
     """
 
-    def fn():  # but still has a closure to allow running it as a process
+    def fn() -> NoReturn:  # but still has a closure to allow running it as a process
         """
         the actual function that gets run
         """
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         sock.bind(("0.0.0.0", port))
         sock.setblocking(False)
-        active_connections = {}
+        active_connections: Dict[Tuple[str, int], float] = {}
         timeout = 30
         while 1:
             active_connections = {k: v for k, v in active_connections.items() if v + timeout < time.time()}
@@ -51,7 +64,7 @@ def udp_server(port, packet_handler, occasional=None):
                 bs, conn = sock.recvfrom(1500)
                 active_connections[conn] = time.time()
                 packet_handler(sock, active_connections, bs, conn)
-            except BlockingIOError as e:
+            except BlockingIOError:
                 pass
             if occasional:
                 occasional(sock)
@@ -60,11 +73,11 @@ def udp_server(port, packet_handler, occasional=None):
     return fn
 
 
-def zeros(size, dtype, rate):
+def zeros(size: int, dtype: str, rate: float) -> BlockFunction:
     """
     Generate a stream of numpy arrays of zeros at a specified rate
     """
-    def fn(config, inq, outq):
+    def fn(config: Any, inq: "multiprocessing.Queue[Any]", outq: "multiprocessing.Queue[Any]") -> NoReturn:
         """
         the block itself
         """
@@ -79,14 +92,14 @@ class M17ReflectorClientBlocks:
     """
     A set of blocks that can be used to create a reflector client
     """
-    def __init__(self, mycall, theirmodule, host, port):
+    def __init__(self, mycall: str, theirmodule: str, host: str, port: int) -> None:
         self.mycall = mycall
         self.theirmodule = theirmodule
         self.host = host
         self.port = port
-        self.qs = {}
+        self.qs: Dict[str, "multiprocessing.Queue[Any]"] = {}
 
-    def start(self):
+    def start(self) -> None:
         """
         start the reflector client
         """
@@ -94,7 +107,14 @@ class M17ReflectorClientBlocks:
                                           args=(self.qs, self.mycall, self.theirmodule, self.host, self.port))
         process.start()
 
-    def proc(self, qs, mycall, theirmodule, host, port):
+    def proc(
+        self,
+        qs: Dict[str, "multiprocessing.Queue[Any]"],
+        mycall: str,
+        theirmodule: str,
+        host: str,
+        port: int
+    ) -> NoReturn:
         """
         the shared process that handles the socket
         """
@@ -104,7 +124,7 @@ class M17ReflectorClientBlocks:
         timeout = .1
         sendq = qs["send"]
         recvq = qs["recv"]
-        conn = (host, port)
+        conn: Tuple[str, int] = (host, port)
         refcon = network.n7tae_reflector_conn(sock, conn, mycall, theirmodule)
         refcon.connect()
         while 1:
@@ -115,7 +135,7 @@ class M17ReflectorClientBlocks:
                     recvq.put(bs)  # could also hand conn along later
                 else:
                     refcon.handle(bs, conn)
-            except BlockingIOError as e:
+            except BlockingIOError:
                 pass
             if not sendq.empty():
                 data = sendq.get_nowait()
@@ -123,16 +143,16 @@ class M17ReflectorClientBlocks:
                 sock.sendto(data, conn)
             time.sleep(.000001)
 
-    def probe(self, name, direction):
+    def probe(self, name: str, direction: str) -> BlockFunction:
         """
         processes that can sample inputs and outputs
-        direction describes the path of elements from fn - 
+        direction describes the path of elements from fn -
         e.g. if it's being used only to generate packets, the direction is "out"
         if it's being used to terminate a processing stream, the direction is "in"
         """
         self.qs[name] = multiprocessing.Queue()
 
-        def fn(config, inq, outq):
+        def fn(config: Any, inq: "multiprocessing.Queue[Any]", outq: "multiprocessing.Queue[Any]") -> NoReturn:
             while 1:
                 if direction == "in":
                     self.qs[name].put(inq.get())
@@ -142,14 +162,14 @@ class M17ReflectorClientBlocks:
 
         return fn
 
-    def receiver(self):
+    def receiver(self) -> BlockFunction:
         return self.probe("recv", "out")
 
-    def sender(self):
+    def sender(self) -> BlockFunction:
         return self.probe("send", "in")
 
 
-def null(config, inq, outq):
+def null(config: Any, inq: "multiprocessing.Queue[Any]", outq: "multiprocessing.Queue[Any]") -> NoReturn:
     """
     Don't do nuffin.
 
@@ -162,7 +182,7 @@ def null(config, inq, outq):
         x = inq.get()
 
 
-def tee(header):
+def tee(header: str) -> BlockFunction:
     """
     Print incoming items to screen before putting them on the next q
     bytes get printed as hex strings
@@ -170,7 +190,7 @@ def tee(header):
     named like standard UNIX tee(1)
     """
 
-    def fn(config, inq, outq):
+    def fn(config: Any, inq: "multiprocessing.Queue[Any]", outq: "multiprocessing.Queue[Any]") -> NoReturn:
         while 1:
             x = inq.get()
             if type(x) == type(b""):
@@ -182,10 +202,10 @@ def tee(header):
     return fn
 
 
-def ffmpeg(ffmpeg_url):
+def ffmpeg(ffmpeg_url: str) -> BlockFunction:
     ffmpeg_url_example = "icecast://source:m17@m17tester.tarxvf.tech:876/live.ogg"
 
-    def fn(config, inq, outq):
+    def fn(config: Any, inq: "multiprocessing.Queue[Any]", outq: "multiprocessing.Queue[Any]") -> NoReturn:
         from subprocess import Popen, PIPE
         p = Popen(
             ["ffmpeg", "-re",
@@ -199,8 +219,8 @@ def ffmpeg(ffmpeg_url):
             try:
                 # audio = inq.get_nowait()
                 audio = inq.get()
-                p.stdin.write(audio.tobytes())
-            except queue.Empty as e:
+                p.stdin.write(audio.tobytes())  # type: ignore[union-attr]
+            except queue.Empty:
                 sys.stdout.write('aU')
                 audio = numpy.zeros(config.codec2.conrate, dtype="<h")
             sys.stdout.flush()
@@ -209,13 +229,13 @@ def ffmpeg(ffmpeg_url):
     return fn
 
 
-def teefile(filename):
+def teefile(filename: str) -> BlockFunction:
     """
     Same as tee, except assumes elements coming in are bytes, and writes
     them to a provided filename
     """
 
-    def fn(config, inq, outq):
+    def fn(config: Any, inq: "multiprocessing.Queue[Any]", outq: "multiprocessing.Queue[Any]") -> NoReturn:
         with open(filename, "wb") as fd:
             try:
                 while True:
@@ -225,30 +245,32 @@ def teefile(filename):
                     outq.put(x)
             except Exception:
                 fd.close()
+        # This is unreachable but satisfies type checker
+        raise RuntimeError("Unexpected exit")  # pragma: no cover
 
     return fn
 
 
-def throttle(n_per_second):
+def throttle(n_per_second: float) -> BlockFunction:
     """
     Read from the inq and only put elements on the outq at (no more than)
     a specified rate in q elements per second. As "no more than" might
     suggest, this is setting a maximum, not a minimum. Minimum is based
     on your hardware and a number of other factors.
     """
-    raise (NotImplementedError)  # TODO
+    raise NotImplementedError  # TODO
 
 
-def delay(size):
+def delay(size: int) -> BlockFunction:
     """
-    keep a rolling fifo of size "size", creating a predictable delay 
+    keep a rolling fifo of size "size", creating a predictable delay
     (assuming they are coming in at a limited rate)
 
     See "throttle()" for enforcing a rate limit of elements per unit time.
     """
 
-    def fn(config, inq, outq):
-        fifo = []
+    def fn(config: Any, inq: "multiprocessing.Queue[Any]", outq: "multiprocessing.Queue[Any]") -> NoReturn:
+        fifo: List[Any] = []
         while 1:
             x = inq.get()
             fifo.insert(0, x)
@@ -258,7 +280,7 @@ def delay(size):
     return fn
 
 
-def ptt(config, inq, outq):
+def ptt(config: Any, inq: "multiprocessing.Queue[Any]", outq: "multiprocessing.Queue[Any]") -> NoReturn:
     """
     take elements off the inq (like audio frames) and only put them on the outq
     if the "push to talk" evaluates truthy.
@@ -272,14 +294,14 @@ def ptt(config, inq, outq):
             outq.put(x)
 
 
-def vox(config, inq, outq):
+def vox(config: Any, inq: "multiprocessing.Queue[Any]", outq: "multiprocessing.Queue[Any]") -> NoReturn:
     """
     Watch for duplicate incoming q elements, and if there's more than
     a configurable threshold in a row, don't copy further duplicates
 
     This lets you use a microphone mute as a reverse PTT, among other things
     """
-    last = None
+    last: Any = None
     repeat_count = 0
     while 1:
         x = inq.get()
@@ -293,7 +315,7 @@ def vox(config, inq, outq):
         outq.put(x)
 
 
-def mic_audio(config, inq, outq):
+def mic_audio(config: Any, inq: "multiprocessing.Queue[Any]", outq: "multiprocessing.Queue[Any]") -> NoReturn:
     """
     Pull audio off the default microphone in 8k, 1 channel, scale it
     into 16bit shorts since soundcard uses floats, and put them in the outq.
@@ -314,7 +336,7 @@ def mic_audio(config, inq, outq):
             outq.put(audio)
 
 
-def spkr_audio(config, inq, outq):
+def spkr_audio(config: Any, inq: "multiprocessing.Queue[Any]", outq: "multiprocessing.Queue[Any]") -> NoReturn:
     """
     play mono (c=1) 8k audio into the speaker
     Accepts 16bit shorts, converts to soundcard expected format
@@ -329,11 +351,11 @@ def spkr_audio(config, inq, outq):
     default_speaker = sc.default_speaker()
 
     # print(default_speaker)
-    def silence():
+    def silence() -> None:
         sp.play(numpy.zeros(config.codec2.conrate))
 
     with default_speaker.player(samplerate=8000, channels=1) as sp:
-        buf = []  # allow for playing chunks of audio even when computer is slow
+        buf: List[Any] = []  # allow for playing chunks of audio even when computer is slow
         buflen = 0  # 0 is dont use
         while 1:
             # if we stop receiving audio because someone stops transmitting,
@@ -353,12 +375,12 @@ def spkr_audio(config, inq, outq):
                             sp.play(b)
                         buf = []
                 sp.play(audio)
-            except queue.Empty as e:
+            except queue.Empty:
                 # and if we have no data, just play zeros
                 silence()
 
 
-def tobytes(config, inq, outq):
+def tobytes(config: Any, inq: "multiprocessing.Queue[Any]", outq: "multiprocessing.Queue[Any]") -> NoReturn:
     """
     convert everything passing through to bytes, just what it says on the tin
     """
@@ -366,7 +388,7 @@ def tobytes(config, inq, outq):
         outq.put(bytes(inq.get()))
 
 
-def m17frame(config, inq, outq):
+def m17frame(config: Any, inq: "multiprocessing.Queue[Any]", outq: "multiprocessing.Queue[Any]") -> NoReturn:
     """
     frame incoming codec2 compressed audio frames into M17 packets
     """
@@ -375,7 +397,7 @@ def m17frame(config, inq, outq):
     print(dst)
     print(src)
     framer = M17IPFramer(
-        streamid=random.randint(1, 2 ** 16 - 1),
+        stream_id=random.randint(1, 2 ** 16 - 1),
         dst=dst,
         src=src,
         streamtype=5,  # TODO need to set this based on codec2 settings too to support c2.1600
@@ -394,7 +416,7 @@ def m17frame(config, inq, outq):
             outq.put(pkt)
 
 
-def m17parse(config, inq, outq):
+def m17parse(config: Any, inq: "multiprocessing.Queue[Any]", outq: "multiprocessing.Queue[Any]") -> NoReturn:
     """
     Parse incoming bytes into M17 ipFrames
     """
@@ -405,27 +427,27 @@ def m17parse(config, inq, outq):
         outq.put(f)
 
 
-def payload2codec2(config, inq, outq):
+def payload2codec2(config: Any, inq: "multiprocessing.Queue[Any]", outq: "multiprocessing.Queue[Any]") -> NoReturn:
     """
     Pull out an M17 payload and return just the raw Codec2 bytes
     """
     byteframe = int(config.codec2.bitframe / 8)  # TODO another place where we assume codec2 frames are byte-sized
     while 1:
         x = inq.get()
-        for x in chunk(x.payload, byteframe):
-            assert len(x) == byteframe
-            outq.put(x)
+        for c in chunk(x.payload, byteframe):
+            assert len(c) == byteframe
+            outq.put(c)
 
 
-def codec2setup(mode):
+def codec2setup(mode: int) -> List[Any]:
     import pycodec2
     c2 = pycodec2.Codec2(mode)
-    conrate = c2.samples_per_frame()
-    bitframe = c2.bits_per_frame()
+    conrate: int = c2.samples_per_frame()
+    bitframe: int = c2.bits_per_frame()
     return [c2, conrate, bitframe]
 
 
-def codec2enc(config, inq, outq):
+def codec2enc(config: Any, inq: "multiprocessing.Queue[Any]", outq: "multiprocessing.Queue[Any]") -> NoReturn:
     """
     exact opposite of codec2dec
 
@@ -440,7 +462,7 @@ def codec2enc(config, inq, outq):
         outq.put(c2bits)
 
 
-def codec2dec(config, inq, outq):
+def codec2dec(config: Any, inq: "multiprocessing.Queue[Any]", outq: "multiprocessing.Queue[Any]") -> NoReturn:
     """
     exact opposite of codec2enc
     In: Depends on Codec2 mode, but expects 8 bytes for Codec2 mode 3200
@@ -453,14 +475,14 @@ def codec2dec(config, inq, outq):
         outq.put(audio)
 
 
-def udp_send(sendto):
+def udp_send(sendto: Tuple[str, int]) -> BlockFunction:
     """
     Send incoming bytes to udp (host,port)
 
     sendto is the standard host,port) tuple like ("localhost",17000)
     """
 
-    def fn(config, inq, outq):
+    def fn(config: Any, inq: "multiprocessing.Queue[Any]", outq: "multiprocessing.Queue[Any]") -> NoReturn:
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         sock.setblocking(False)
         while 1:
@@ -470,14 +492,14 @@ def udp_send(sendto):
     return fn
 
 
-def udp_recv(port):
+def udp_recv(port: int) -> BlockFunction:
     """
     Receive UDP datagram payloads as bytes and output them to outq
     Maintains UDP datagram separation on the q
     Does not allow for responding to incoming packets. See udp_server for that.
     """
 
-    def fn(config, inq, outq):
+    def fn(config: Any, inq: "multiprocessing.Queue[Any]", outq: "multiprocessing.Queue[Any]") -> NoReturn:
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         sock.bind(("0.0.0.0", port))
         # sock.setblocking(False)
@@ -492,14 +514,14 @@ def udp_recv(port):
     return fn
 
 
-def integer_decimate(i):
+def integer_decimate(i: int) -> BlockFunction:
     """
     For each incoming list of things, skip some of them, decimating the incoming signal
     e.g. integer_decimate(2) will cut a 16khz sampled audio signal to 8khz
     see integer_interpolate for the reverse
     """
 
-    def fn(config, inq, outq):
+    def fn(config: Any, inq: "multiprocessing.Queue[Any]", outq: "multiprocessing.Queue[Any]") -> NoReturn:
         while 1:
             x = inq.get()
             de = x[::i]
@@ -508,7 +530,7 @@ def integer_decimate(i):
     return fn
 
 
-def integer_interpolate(i):
+def integer_interpolate(i: int) -> BlockFunction:
     """
     for each incoming list of things, interpolate
     useful for going from 8khz audio to 16khz audio to match expected formats
@@ -516,7 +538,7 @@ def integer_interpolate(i):
     starting to look uncomfortably like gnuradio, innit?
     """
 
-    def fn(config, inq, outq):
+    def fn(config: Any, inq: "multiprocessing.Queue[Any]", outq: "multiprocessing.Queue[Any]") -> NoReturn:
         import samplerate
         resampler = samplerate.Resampler('sinc_best', channels=1)
         while 1:
@@ -528,13 +550,13 @@ def integer_interpolate(i):
     return fn
 
 
-def chunker_b(size):
+def chunker_b(size: int) -> BlockFunction:
     """
     Incoming bytes will get chunked into a particular size for downstream
     nodes that don't do their own buffering
     """
 
-    def fn(config, inq, outq):
+    def fn(config: Any, inq: "multiprocessing.Queue[Any]", outq: "multiprocessing.Queue[Any]") -> NoReturn:
         buf = b""
         while 1:
             x = inq.get()
@@ -546,12 +568,12 @@ def chunker_b(size):
     return fn
 
 
-def np_convert(outtype):
+def np_convert(outtype: str) -> BlockFunction:
     """
     Use numpy to convert incoming elements to a numpy type
     """
 
-    def fn(config, inq, outq):
+    def fn(config: Any, inq: "multiprocessing.Queue[Any]", outq: "multiprocessing.Queue[Any]") -> NoReturn:
         while 1:
             x = inq.get()
             y = numpy.frombuffer(x, outtype)
@@ -560,10 +582,10 @@ def np_convert(outtype):
     return fn
 
 
-def check_ptt():
+def check_ptt() -> bool:
     """
-    is there a good way to do cross platform ptt, or 
-    should i abandon that idea and try to improve vox, or 
+    is there a good way to do cross platform ptt, or
+    should i abandon that idea and try to improve vox, or
     just assume linux?
     """
     if int(time.time() / 2) % 2 == 0:

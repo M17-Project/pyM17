@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import struct
 from dataclasses import dataclass, field
-from typing import List, Optional
+from typing import Iterator, List, Optional
 from enum import IntEnum
 
 from m17.core.crc import crc_m17
@@ -230,7 +230,7 @@ class PacketFrame:
         """Return string representation."""
         return f"PacketFrame: {self.total_chunks} chunks, {self.total_bytes} bytes"
 
-    def __iter__(self):
+    def __iter__(self) -> "Iterator[PacketChunk]":
         """Iterate over chunks."""
         return iter(self.chunks)
 

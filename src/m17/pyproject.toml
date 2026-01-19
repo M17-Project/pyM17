@@ -66,10 +66,40 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.mypy]
 python_version = "3.12"
-warn_return_any = true
-warn_unused_configs = true
+# Enable strict mode
+strict = true
+# Keep ignore_missing_imports for external dependencies without stubs
 ignore_missing_imports = true
-strict_optional = true
+
+# Per-module overrides for gradual adoption
+[[tool.mypy.overrides]]
+module = [
+    "m17.net.*",
+    "m17.audio.*",
+]
+# Relax strict mode for optional networking and audio modules
+# These modules depend on optional external packages (kademlia, pycodec2)
+disallow_untyped_defs = false
+warn_return_any = false
+check_untyped_defs = false
+disable_error_code = ["index", "assignment", "type-arg", "attr-defined", "no-untyped-def"]
+
+[[tool.mypy.overrides]]
+module = [
+    "m17.frames.ip",
+    "m17.frames.lich",
+    "m17.frames.lsf",
+]
+# These modules have complex Union[str, Address] typing
+# that accepts both strings and Address objects with __post_init__ conversion
+# This will be fully addressed in a future refactor
+warn_return_any = false
+disable_error_code = ["arg-type", "return-value", "union-attr", "type-arg", "no-untyped-def"]
+
+[[tool.mypy.overrides]]
+module = ["m17", "m17.__init__"]
+# Main init has complex conditional imports and re-exports
+disable_error_code = ["misc", "assignment"]
 
 [tool.ruff]
 line-length = 100

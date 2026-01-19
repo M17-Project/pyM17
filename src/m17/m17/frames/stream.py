@@ -164,6 +164,9 @@ class StreamFrame:
         payload: M17Payload with frame data.
     """
 
+    # Class constants
+    payload_sz: int = 16  # 16 bytes of payload data
+
     lich_chunk: bytes = field(default_factory=lambda: bytes(6))
     payload: M17Payload = field(default_factory=M17Payload)
 

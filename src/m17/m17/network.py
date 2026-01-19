@@ -1,3 +1,11 @@
+"""
+M17 Networking (Legacy)
+
+This module contains legacy networking code for M17.
+Refactored versions are in m17/net/ subpackage.
+"""
+from __future__ import annotations
+
 import asyncio
 import enum
 import json
@@ -7,6 +15,7 @@ import socket
 import sys
 import threading
 import time
+from typing import Any, Awaitable, Callable, Dict, List, Optional, Tuple, Union
 
 from kademlia.network import Server
 
@@ -17,11 +26,11 @@ from m17.misc import DictDotAttribute
 
 logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 
-primaries = [("m17.tarxvf.tech.", 17000)]
-dhtbootstraps = [("m17dhtboot0.tarxvf.tech.", 17001)]
+primaries: List[Tuple[str, int]] = [("m17.tarxvf.tech.", 17000)]
+dhtbootstraps: List[Tuple[str, int]] = [("m17dhtboot0.tarxvf.tech.", 17001)]
 
 
-def m17ref_name2host(refname):
+def m17ref_name2host(refname: str) -> str:
     return "%s.m17ref.tarxvf.tech" % (refname)
 
 
@@ -29,7 +38,13 @@ def m17ref_name2host(refname):
 # return "%s.m17ref.tarxvf.tech"%(refname)
 
 class n7tae_reflector_conn:
-    def __init__(self, sock, conn, mycallsign, theirmodule="A"):
+    def __init__(
+        self,
+        sock: socket.socket,
+        conn: Tuple[str, int],
+        mycallsign: str,
+        theirmodule: str = "A"
+    ) -> None:
         self.module = theirmodule
         self.sock = sock
         self.conn = conn
@@ -37,35 +52,35 @@ class n7tae_reflector_conn:
         self.mycall_b = bytes(m17.address.Address(callsign=self.mycallsign))
         print("MYCALL=%s" % (self.mycallsign))
 
-    def connect(self):
+    def connect(self) -> None:
         data = b"CONN" + self.mycall_b + self.module.encode("ascii")
         self.send(data)
 
-    def pong(self):
+    def pong(self) -> None:
         data = b"PONG" + self.mycall_b
         self.send(data)
 
-    def disco(self):
+    def disco(self) -> None:
         data = b"DISC" + self.mycall_b
         self.send(data)
 
-    def send(self, data):
+    def send(self, data: bytes) -> None:
         print("TAE SEND:", data)
         self.sock.sendto(data, self.conn)
 
-    def handle(self, pkt, conn):
+    def handle(self, pkt: bytes, conn: Tuple[str, int]) -> None:
         if pkt.startswith(b"PING"):
             self.pong()
         elif pkt.startswith(b"ACKN"):
             pass  # everything's fine
         elif pkt.startswith(b"NACK"):
             self.disco()
-            raise (Exception("Refused by reflector"))
+            raise Exception("Refused by reflector")
         elif pkt.startswith(b"CONN"):
-            raise (NotImplementedError)
+            raise NotImplementedError
         else:
             print(pkt)
-            raise (NotImplementedError)
+            raise NotImplementedError
 
 
 class msgtype(enum.Enum):
@@ -90,30 +105,40 @@ class msgtype(enum.Enum):
 
 
 class m17_networking_direct:
-    def __init__(self, primaries, callsign, port=17000):
+    def __init__(
+        self,
+        primaries: List[Tuple[str, int]],
+        callsign: str,
+        port: int = 17000
+    ) -> None:
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.sock.bind(("0.0.0.0", port))
         self.sock.setblocking(False)
         # self.sock.bind( ("::1", 17000) )
 
-        self.recvQ = queue.Queue()
-        self.sendQ = queue.Queue()
-        network = threading.Thread(target=self.networker, args=(self.recvQ, self.sendQ))
-        network.start()
+        self.recvQ: queue.Queue[Tuple[bytes, Tuple[str, int]]] = queue.Queue()
+        self.sendQ: queue.Queue[Tuple[bytes, Tuple[str, int]]] = queue.Queue()
+        network_thread = threading.Thread(target=self.networker, args=(self.recvQ, self.sendQ))
+        network_thread.start()
 
-        self.conns = {}  # i was intending this for client side, not sure it makes sense
+        self.conns: Dict[Union[str, Tuple[str, int]], DictDotAttribute] = {}  # i was intending this for client side, not sure it makes sense
 
-        self.whereis = {}
+        self.whereis: Dict[Union[str, Tuple[str, int]], Tuple[float, Any]] = {}
 
         self.primaries = primaries
         self.callsign = callsign
         self.m17_addr = m17.address.Address.encode(self.callsign)
 
-        self.last = 0
+        self.last: float = 0
         self.registration_keepalive_period = 25
         self.connection_timeout = 25
+        self.looper: Optional[threading.Thread] = None
 
-    def networker(self, recvq, sendq):
+    def networker(
+        self,
+        recvq: queue.Queue[Tuple[bytes, Tuple[str, int]]],
+        sendq: queue.Queue[Tuple[bytes, Tuple[str, int]]]
+    ) -> None:
         """
         """
         while 1:
@@ -121,7 +146,7 @@ class m17_networking_direct:
                 data, conn = self.sock.recvfrom(1500)
                 print("RECV", conn, data)
                 recvq.put((data, conn))
-            except BlockingIOError as e:
+            except BlockingIOError:
                 pass
             if not sendq.empty():
                 data, conn = sendq.get_nowait()
@@ -129,8 +154,8 @@ class m17_networking_direct:
                 self.sock.sendto(data, conn)
             time.sleep(.0001)
 
-    def loop(self):
-        def looper(self):
+    def loop(self) -> None:
+        def looper(self: m17_networking_direct) -> None:
             while 1:
                 self.loop_once()
                 time.sleep(.005)
@@ -138,11 +163,11 @@ class m17_networking_direct:
         self.looper = threading.Thread(target=looper, args=(self,))
         self.looper.start()
 
-    def clean_conns(self):
+    def clean_conns(self) -> None:
         ...
         # self.conns = {conn: data for conn, data in self.conns if time.time() - data.last > self.connection_timeout}
 
-    def loop_once(self):
+    def loop_once(self) -> None:
         self.registration_keepalive()
         if not self.recvQ.empty():
             data, conn = self.recvQ.get_nowait()
@@ -159,11 +184,11 @@ class m17_networking_direct:
         # self.clean_conns()
         # self.clean_whereis()
 
-    def M17J_send(self, payload, conn):
+    def M17J_send(self, payload: bytes, conn: Tuple[str, int]) -> None:
         # print("Sending to %s M17J %s"%(conn,payload))
         self.sendQ.put((b"M17J" + payload, conn))
 
-    def process_packet(self, payload, conn):
+    def process_packet(self, payload: bytes, conn: Tuple[str, int]) -> None:
         if payload.startswith(b"M17 "):
             ...
             # voice and data packets
@@ -175,6 +200,7 @@ class m17_networking_direct:
             elif msg.msgtype == msgtype.i_am_here:
                 self.reg_store(msg.callsign, conn)  # so we store it
             elif msg.msgtype == msgtype.where_is:
+                callsign = msg.callsign
                 lastseen, theirconn = self.reg_fetch(callsign)
                 self.answer_where_is(conn, callsign, theirconn)
             elif msg.msgtype == msgtype.is_at:
@@ -194,8 +220,24 @@ class m17_networking_direct:
             import pdb;
             pdb.set_trace()
 
+    def reg_fetch(self, callsign: str) -> Tuple[float, Tuple[str, int]]:
+        """Fetch registration by callsign."""
+        result = self.whereis[callsign]
+        return (result[0], result[1])
+
+    def answer_where_is(
+        self,
+        conn: Tuple[str, int],
+        callsign: str,
+        loc: Tuple[str, int]
+    ) -> None:
+        """Answer a where-is query."""
+        addr = m17.address.Address.encode(callsign)
+        payload = json.dumps({"msgtype": "is at", "m17_addr": addr.hex(), "host": loc[0]}).encode("utf-8")
+        self.M17J_send(payload, conn)
+
     # user registration handling starts here
-    def registration_keepalive(self):
+    def registration_keepalive(self) -> None:
         """
         Periodically re-register
         """
@@ -207,20 +249,22 @@ class m17_networking_direct:
                 self.register_me_with(primary)
             self.last = time.time()
 
-    def register_me_with(self, server):
+    def register_me_with(self, server: Tuple[str, int]) -> None:
         payload = json.dumps({"msgtype": "i am here", "callsign": self.callsign}).encode("utf-8")
         self.M17J_send(payload, server)
 
-    def reg_store(self, callsign, conn):
+    def reg_store(self, callsign: str, conn: Tuple[str, int]) -> None:
         print("[M17 registration] %s -> %s" % (callsign, conn))
         self.whereis[callsign] = (time.time(), conn)
         self.whereis[conn] = (time.time(), callsign)
 
-    def reg_fetch_by_callsign(self, callsign):
-        return self.whereis[callsign]
+    def reg_fetch_by_callsign(self, callsign: str) -> Tuple[float, Tuple[str, int]]:
+        result = self.whereis[callsign]
+        return (result[0], result[1])
 
-    def reg_fetch_by_conn(self, conn):
-        return self.whereis[conn]
+    def reg_fetch_by_conn(self, conn: Tuple[str, int]) -> Tuple[float, str]:
+        result = self.whereis[conn]
+        return (result[0], str(result[1]))
 
     # def callsign_lookup( self, callsign):
     # for primary in self.primaries:
@@ -235,12 +279,12 @@ class m17_networking_direct:
     # self.rendezvous_send(payload, conn)
 
     # the rendezvous stuff starts here
-    def request_rendezvous(self, callsign):
+    def request_rendezvous(self, callsign: str) -> None:
         payload = json.dumps({"msgtype": "introduce me?", "callsign": callsign}).encode("utf-8")
         for introducer in self.primaries:
             self.M17J_send(payload, introducer)
 
-    def arrange_rendezvous(self, conn, msg):
+    def arrange_rendezvous(self, conn: Tuple[str, int], msg: DictDotAttribute) -> None:
         # requires peer1 and peer2 both be connected live to self (e.g. keepalives)
         # sent to opposing peer with other sides host and expected port
         try:
@@ -261,21 +305,21 @@ class m17_networking_direct:
             "utf-8")
         self.M17J_send(payload, conn)  # this one we can reply to directly, of course
 
-    def attempt_rendezvous(self, conn, msg):
+    def attempt_rendezvous(self, conn: Tuple[str, int], msg: DictDotAttribute) -> None:
         payload = json.dumps({"msgtype": "hi!", "callsign": self.callsign}).encode("utf-8")
         self.M17J_send(payload, (msg.host, msg.port))
 
-    def have_link(self, callsign):
+    def have_link(self, callsign: str) -> Union[float, bool]:
         try:
             last, conn = self.reg_fetch_by_callsign(callsign)
             return time.time() - last  # <30
-        except KeyError as e:
+        except KeyError:
             return False
 
-    def callsign_connect(self, callsign):
+    def callsign_connect(self, callsign: str) -> None:
         self.request_rendezvous(callsign)
 
-    def callsign_wait_connect(self, callsign):
+    def callsign_wait_connect(self, callsign: str) -> bool:
         self.callsign_connect(callsign)
         start = time.time()
         while not self.have_link(callsign):
@@ -286,7 +330,12 @@ class m17_networking_direct:
         return True
 
 
-async def repeat(interval, func, *args, **kwargs):
+async def repeat(
+    interval: float,
+    func: Callable[..., Awaitable[Any]],
+    *args: Any,
+    **kwargs: Any
+) -> None:
     """Run func every interval seconds.
 
     If func has not finished before *interval*, will run again
@@ -317,7 +366,7 @@ class m17_networking_dht:
 
     handhelds should not need to run a DHT.
     DHT and other p2p stuff should be for servers, reflectors, etc - infrastructure
-    handhelds and clients are not infrastructure. 
+    handhelds and clients are not infrastructure.
     They should be able to join through any node in the network.
     one way to handle that would be to have the bootstrap node(s) also
     be DNS servers, where when you ask for a record it returns the result
@@ -355,14 +404,14 @@ class m17_networking_dht:
 
     """
 
-    def __init__(self, callsign, myhost, port, should_boot=True):
+    def __init__(self, callsign: str, myhost: str, port: int, should_boot: bool = True) -> None:
         self.callsign = callsign
         self.host = myhost
         self.port = port
         self.should_boot = should_boot
-        self.node = Server()
+        self.node: Server = Server()
 
-    async def run(self):
+    async def run(self) -> None:
         await self.node.listen(self.port)
         if self.should_boot:
             await self.node.bootstrap([
@@ -372,13 +421,13 @@ class m17_networking_dht:
         t1 = asyncio.ensure_future(repeat(15, self.register_me))
         t2 = asyncio.ensure_future(repeat(15, self.check))
 
-    async def check(self):
+    async def check(self) -> None:
         for c in ["", "-M", "-T", "-F"]:
             call = "W2FBI" + c
             x = await self.node.get(call)
             print(call, x)
 
-    async def register_me(self):
+    async def register_me(self) -> None:
         me = [self.host, self.port]
         jme = json.dumps(me)
         await self.node.set(self.callsign, jme)
@@ -386,13 +435,13 @@ class m17_networking_dht:
 
 
 if __name__ == "__main__":
-    def loop_once(loop):
+    def loop_once(loop: asyncio.AbstractEventLoop) -> None:
         loop.stop()
         loop.run_forever()
 
 
     if sys.argv[1] == "dhtclient":
-        async def run():
+        async def run() -> None:
             server = Server()
             await server.listen(8469)
             bootstrap_node = (sys.argv[2], int(sys.argv[3]))
@@ -423,7 +472,7 @@ if __name__ == "__main__":
         # curl ident.me, or should check with dht bootstrapping nodes
         should_boot = bool(sys.argv[4].lower() in ["true", "yes", "1"])
         loop = asyncio.get_event_loop()
-        x = m17_networking_dht(callsign, host, should_boot)
+        x = m17_networking_dht(callsign, host, 17001, should_boot)
         loop.run_until_complete(x.run())
         loop.set_debug(True)
         loop.run_forever()
@@ -434,15 +483,15 @@ if __name__ == "__main__":
         if "-s" in sys.argv[2:]:
             portnum = 17000
         else:
-            portnum = (m17.address.Address.encode(callsign) % 32767) + 32767
+            portnum = (int.from_bytes(m17.address.Address.encode(callsign), "big") % 32767) + 32767
         print(portnum)
-        x = m17_networking_direct(primaries, callsign=callsign, port=portnum)
-        x.loop()
+        direct_net = m17_networking_direct(primaries, callsign=callsign, port=portnum)
+        direct_net.loop()
         import pdb;
 
         pdb.set_trace()
 
-    # x.callsign_connect("W2FBI") #this is how you do an automatic udp hole punch. 
+    # x.callsign_connect("W2FBI") #this is how you do an automatic udp hole punch.
     # #Registers the connection and maintains keepalives with that host. They should do the same.
     # x.have_link("W2FBI") #check if we are connected.
     # x.callsign_disco("W2FBI") #this is how you stop the keepalives and kill that connection (not implemented yet)
@@ -452,7 +501,7 @@ if __name__ == "__main__":
 
 # spin this up on a public host for a demo like
 # `python3 -m m17.network CALLSIGN -s`
-# (and put the address of the public server in primaries like m17.programradios.com, above) 
+# (and put the address of the public server in primaries like m17.programradios.com, above)
 
-# demo clients should each `python3 -m m17.network UNIQUE_CALLSIGN` 
+# demo clients should each `python3 -m m17.network UNIQUE_CALLSIGN`
 # and then one can type x.connect_callsign(

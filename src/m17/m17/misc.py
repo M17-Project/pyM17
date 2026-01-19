@@ -1,18 +1,23 @@
 """
 misc.py
 """
+from __future__ import annotations
+
 import binascii
 import functools
 import random
 import sys
+from typing import Any, Callable, Dict, List, TypeVar, Union
+
+T = TypeVar("T", bound=Union[bytes, str])
 
 
-def binary_print_factory(size):
+def binary_print_factory(size: int) -> Callable[[int], str]:
     """
     Create a function that will print a number in binary, in chunks of a certain size.
     :param size: size of each chunk
     """
-    def binary_print(num):
+    def binary_print(num: int) -> str:
         binary_str = format(num, 'b').zfill(size)
         chunked_str = [binary_str[max(i - size, 0):i] for i in range(len(binary_str), 0, -size)]
         return " ".join(chunked_str[::-1])
@@ -27,23 +32,23 @@ print_bits = print_8bits
 print_hex = functools.partial(binascii.hexlify, sep=" ", bytes_per_sep=-4)
 
 
-def example_bytes(length):
+def example_bytes(length: int) -> bytearray:
     """
     :param length: number of bytes to generate
     """
     return bytearray(random.getrandbits(8) for _ in range(length))
 
 
-def demonstrate_chunk():
+def demonstrate_chunk() -> None:
     """
     demonstrate the chunk function
     """
-    ab = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    ab = b"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
     print(chunk(ab, 5))
     print(chunk(ab, -5))
 
 
-def chunk(b: bytes, size: int):
+def chunk(b: bytes, size: int) -> List[bytes]:
     """
     Chunk a byte array into chunks of a certain size
 
@@ -63,13 +68,13 @@ def chunk(b: bytes, size: int):
         return [b[i:i + size] for i in range(0, len(b), size)]
 
 
-class DictDotAttribute(dict):
+class DictDotAttribute(dict[str, Any]):
     """
     "DictDotAttribute", used for when you don't want to type [""] all the time
     (and i think it looks nicer for things like config settings)
     """
 
-    def __getattr__(self, name):
+    def __getattr__(self, name: str) -> Any:
         """
         With a DictDotAttribute, you can do this:
         >>> x = DictDotAttribute({"abc":True})
@@ -85,7 +90,7 @@ class DictDotAttribute(dict):
         # otherwise just make our key,value pairs accessible through . (e.g. x.name)
         return self[name]
 
-    def __setattr__(self, name, value):
+    def __setattr__(self, name: str, value: Any) -> None:
         """
         With a DictDotAttribute, you can do this:
 
@@ -97,7 +102,7 @@ class DictDotAttribute(dict):
         self[name] = value
 
 
-def c_array_init_file(filename):
+def c_array_init_file(filename: str) -> None:
     """
     Print a C array initializer for a file
     """
@@ -105,7 +110,7 @@ def c_array_init_file(filename):
         c_array_init(fd.read())
 
 
-def c_array_init(bs: bytes):
+def c_array_init(bs: bytes) -> None:
     """
     Print a C array initializer for a byte array
     """
@@ -128,7 +133,7 @@ def c_array_init(bs: bytes):
 
 
 if __name__ == "__main__":
-    _CLI_COMMANDS = {
+    _CLI_COMMANDS: Dict[str, Callable[..., Any]] = {
         "c_array_init_file": c_array_init_file,
         "demonstrate_chunk": demonstrate_chunk,
     }
