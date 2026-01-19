@@ -53,7 +53,8 @@ def udp_server(port, packet_handler, occasional=None):
                 packet_handler(sock, active_connections, bs, conn)
             except BlockingIOError as e:
                 pass
-            occasional(sock)
+            if occasional:
+                occasional(sock)
             time.sleep(.001)
 
     return fn
@@ -217,12 +218,12 @@ def teefile(filename):
     def fn(config, inq, outq):
         with open(filename, "wb") as fd:
             try:
-                while 1:
+                while True:
                     x = inq.get()
                     fd.write(x)
                     fd.flush()
                     outq.put(x)
-            except:
+            except Exception:
                 fd.close()
 
     return fn
