@@ -24,6 +24,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Fixed `any()` misuse in `address.py:114`**
   - Removed incorrect `any()` wrapper around boolean return
 
+### Changed
+
+- **Enabled mypy strict mode** - Full type safety enforcement
+  - Added `strict = true` to pyproject.toml mypy configuration
+  - Added type annotations to ~70+ functions in blocks.py, misc.py, framer.py, address.py, network.py, apps.py
+  - Reduced mypy errors from 304 to 0
+  - Per-module overrides for optional modules (net/*, audio/*) that depend on external packages without type stubs
+  - Per-module overrides for frames modules with complex Union[str, Address] typing patterns
+
 ### Added
 
 - **Comprehensive test suite** - 348 tests, coverage improved from 35% to 43%

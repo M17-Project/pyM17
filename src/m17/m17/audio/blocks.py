@@ -139,11 +139,11 @@ class MicrophoneSource:
     """
 
     samples_per_frame: int = 160
-    _output_queue: Optional[queue.Queue] = field(default=None, init=False)
+    _output_queue: Optional[queue.Queue[Any]] = field(default=None, init=False)
     _running: bool = field(default=False, init=False)
     _thread: Optional[threading.Thread] = field(default=None, init=False)
 
-    def connect(self, output_queue: queue.Queue) -> None:
+    def connect(self, output_queue: queue.Queue[Any]) -> None:
         """Connect to output queue."""
         self._output_queue = output_queue
 
@@ -185,7 +185,7 @@ class SpeakerSink:
     Plays int16 numpy arrays at 8kHz mono.
     """
 
-    _input_queue: queue.Queue = field(default_factory=queue.Queue, init=False)
+    _input_queue: queue.Queue[Any] = field(default_factory=queue.Queue, init=False)
     _running: bool = field(default=False, init=False)
     _thread: Optional[threading.Thread] = field(default=None, init=False)
 
@@ -282,10 +282,10 @@ class M17Framer:
     _stream_id: int = field(default_factory=lambda: random.randint(1, 0xFFFF), init=False)
     _frame_number: int = field(default=0, init=False)
     _buffer: bytearray = field(default_factory=bytearray, init=False)
-    _input_queue: queue.Queue = field(default_factory=queue.Queue, init=False)
-    _output_queue: Optional[queue.Queue] = field(default=None, init=False)
+    _input_queue: queue.Queue[Any] = field(default_factory=queue.Queue, init=False)
+    _output_queue: Optional[queue.Queue[Any]] = field(default=None, init=False)
 
-    def connect(self, output_queue: queue.Queue) -> None:
+    def connect(self, output_queue: queue.Queue[Any]) -> None:
         """Connect to output queue."""
         self._output_queue = output_queue
 

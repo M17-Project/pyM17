@@ -2,31 +2,39 @@
 This module contains the M17 framer classes. These classes are responsible for taking a payload and
  turning it into a series of frames.
 """
+from __future__ import annotations
+
 import random
+from typing import Any, List, Optional
 
 
-from m17.frames import LICHFrame, RegularFrame, IPFrame, chunk, M17Payload
+from m17.frames import LICHFrame, StreamFrame, IPFrame, M17Payload
+from m17.misc import chunk
 
 
 class M17RFFramer:
     """
     M17 RF Framer
     """
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         self.packet_count = 0
         self.lich_frame = LICHFrame(*args, **kwargs)
 
-    def payload_stream(self, payload: bytes):
+    def payload_stream(self, payload: bytes) -> List[StreamFrame]:
         """
         Take a payload and turn it into a series of frames
         """
-        payloads = chunk(payload, RegularFrame.payload_sz)
-        pkts = []
+        payloads = chunk(payload, StreamFrame.payload_sz)
+        pkts: List[StreamFrame] = []
+        lich_chunks = self.lich_frame.chunks(6)
         for p in payloads:
-            if len(p) < RegularFrame.payload_sz:
-                p = p + b"\x00" * (RegularFrame.payload_sz - len(p))
+            if len(p) < StreamFrame.payload_sz:
+                p = p + b"\x00" * (StreamFrame.payload_sz - len(p))
             m17_payload = M17Payload(frame_number=self.packet_count, payload=p)
-            pkt = RegularFrame(self.lich_frame, m17_payload)
+            # Get LICH chunk for this frame (5 chunks rotate)
+            lich_chunk_idx = self.packet_count % 5
+            lich_chunk = lich_chunks[lich_chunk_idx] if lich_chunk_idx < len(lich_chunks) else bytes(6)
+            pkt = StreamFrame(lich_chunk=lich_chunk, payload=m17_payload)
             self.packet_count += 1
             if self.packet_count >= 2 ** 16:
                 self.packet_count = 0
@@ -38,25 +46,30 @@ class M17IPFramer(M17RFFramer):
     """
     M17 IP Frame Framer
     """
-    def __init__(self, stream_id: int=None, *args, **kwargs):
+    def __init__(self, stream_id: Optional[int] = None, *args: Any, **kwargs: Any) -> None:
         self.stream_id = stream_id or random.randint(0, 2 ** 16 - 1)
         super().__init__(*args, **kwargs)
 
-    def payload_stream(self, payload: bytes):
+    def payload_stream(self, payload: bytes) -> List[IPFrame]:  # type: ignore[override]
         """
         Take a payload and turn it into a series of frames
         """
         # only difference is which frame we use, ipFrame instead of regularFrame
         lich_frame = self.lich_frame
-        payloads = chunk(payload, RegularFrame.payload_sz)
-        pkts = []
+        payloads = chunk(payload, StreamFrame.payload_sz)
+        pkts: List[IPFrame] = []
         for p in payloads:
-            if len(p) < RegularFrame.payload_sz:
-                p = p + b"\x00" * (RegularFrame.payload_sz - len(p))
-            pkt = IPFrame(
+            if len(p) < StreamFrame.payload_sz:
+                p = p + b"\x00" * (StreamFrame.payload_sz - len(p))
+            m17_payload = M17Payload(frame_number=self.packet_count, payload=p)
+            pkt = IPFrame.create(
                 stream_id=self.stream_id,
-                full_lich=lich_frame,
-                m17_payload=M17Payload(frame_number=self.packet_count, payload=p),
+                dst=lich_frame.dst,
+                src=lich_frame.src,
+                stream_type=lich_frame.stream_type,
+                nonce=lich_frame.nonce,
+                frame_number=m17_payload.frame_number,
+                payload=m17_payload.payload,
             )
             self.packet_count += 1
             if self.packet_count >= 2 ** 16:

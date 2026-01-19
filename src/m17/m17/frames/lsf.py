@@ -541,14 +541,14 @@ class LinkSetupFrame:
     Contains addressing and stream configuration information.
 
     Attributes:
-        dst: Destination address.
-        src: Source address.
+        dst: Destination address (or callsign string that will be converted).
+        src: Source address (or callsign string that will be converted).
         type_field: 16-bit TYPE field value.
         meta: 14-byte META field.
     """
 
-    dst: Address
-    src: Address
+    dst: Union[str, Address]
+    src: Union[str, Address]
     type_field: int = 0x0005  # Default: voice stream, no encryption
     meta: bytes = field(default_factory=lambda: bytes(14))
 
@@ -912,4 +912,7 @@ class LinkSetupFrame:
 
     def __str__(self) -> str:
         """Return string representation."""
-        return f"LSF: {self.src.callsign} -> {self.dst.callsign} [type=0x{self.type_field:04x}]"
+        # After __post_init__, dst and src are guaranteed to be Address objects
+        src = self.src if isinstance(self.src, Address) else Address(callsign=self.src)
+        dst = self.dst if isinstance(self.dst, Address) else Address(callsign=self.dst)
+        return f"LSF: {src.callsign} -> {dst.callsign} [type=0x{self.type_field:04x}]"

@@ -9,7 +9,7 @@ Port from libm17/encode/convol.c
 
 from __future__ import annotations
 
-from typing import List
+from typing import List, Optional
 
 __all__ = [
     "conv_encode",
@@ -28,7 +28,7 @@ POLY_G1: int = 0x19  # x^4 + x^3 + 1
 POLY_G2: int = 0x17  # x^4 + x^2 + x + 1
 
 
-def _unpack_bits(data: bytes, num_bits: int = None) -> List[int]:
+def _unpack_bits(data: bytes, num_bits: Optional[int] = None) -> List[int]:
     """
     Unpack bytes to a list of bits (MSB first).
 

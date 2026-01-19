@@ -1,5 +1,4 @@
-
-helptext="""
+helptext = """
 `python -m m17` doesn't do anything on it's own (yet).
 Examples:
 
@@ -19,7 +18,9 @@ With `pip install m17[Codec2]`
     connect to M17-M17 A as YOURCALL A
     python -m m17.apps m17ref_client YOURCALL A M17-M17 A
 """
-def main():
+
+
+def main() -> None:
     print(helptext)
 
 
