@@ -1,5 +1,4 @@
-"""
-Tests for M17 Puncturing Patterns
+"""Tests for M17 Puncturing Patterns
 
 Tests the puncture and depuncture operations for M17 FEC.
 """
@@ -7,18 +6,18 @@ Tests the puncture and depuncture operations for M17 FEC.
 import pytest
 
 from m17.codec.puncture import (
-    puncture,
-    depuncture,
-    puncture_lsf,
-    puncture_stream,
-    puncture_packet,
-    puncture_bert,
-    depuncture_lsf,
-    depuncture_stream,
-    depuncture_packet,
     PUNCTURE_P1,
     PUNCTURE_P2,
     PUNCTURE_P3,
+    depuncture,
+    depuncture_lsf,
+    depuncture_packet,
+    depuncture_stream,
+    puncture,
+    puncture_bert,
+    puncture_lsf,
+    puncture_packet,
+    puncture_stream,
 )
 
 

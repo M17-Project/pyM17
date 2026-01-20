@@ -1,5 +1,4 @@
-"""
-M17 Reflector Protocol (n7tae)
+"""M17 Reflector Protocol (n7tae)
 
 Implements the n7tae reflector protocol for M17-over-IP.
 
@@ -21,9 +20,10 @@ import asyncio
 import logging
 import socket
 import time
+from collections.abc import AsyncGenerator, Callable
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import AsyncGenerator, Callable, Optional, Tuple, Union
+from typing import Optional
 
 from m17.core.address import Address
 from m17.frames.ip import IPFrame
@@ -63,8 +63,7 @@ class ReflectorMessage(Enum):
 
 @dataclass
 class ReflectorProtocol:
-    """
-    Low-level reflector protocol handler.
+    """Low-level reflector protocol handler.
 
     Handles encoding/decoding of reflector protocol messages.
     """
@@ -78,13 +77,14 @@ class ReflectorProtocol:
         self._callsign_bytes = bytes(addr)
 
     def make_connect(self, module: str = "A") -> bytes:
-        """
-        Create CONN message.
+        """Create CONN message.
 
         Args:
+        ----
             module: Reflector module (A-Z).
 
         Returns:
+        -------
             CONN message bytes.
         """
         if len(module) != 1 or not module.isalpha():
@@ -92,35 +92,37 @@ class ReflectorProtocol:
         return b"CONN" + self._callsign_bytes + module.upper().encode("ascii")
 
     def make_disconnect(self) -> bytes:
-        """
-        Create DISC message.
+        """Create DISC message.
 
-        Returns:
+        Returns
+        -------
             DISC message bytes.
         """
         return b"DISC" + self._callsign_bytes
 
     def make_pong(self) -> bytes:
-        """
-        Create PONG message.
+        """Create PONG message.
 
-        Returns:
+        Returns
+        -------
             PONG message bytes.
         """
         return b"PONG" + self._callsign_bytes
 
     @staticmethod
-    def parse_message(data: bytes) -> Tuple[ReflectorMessage, bytes]:
-        """
-        Parse a received message.
+    def parse_message(data: bytes) -> tuple[ReflectorMessage, bytes]:
+        """Parse a received message.
 
         Args:
+        ----
             data: Received bytes.
 
         Returns:
+        -------
             Tuple of (message type, payload).
 
         Raises:
+        ------
             ValueError: If message is unknown.
         """
         if len(data) < 4:
@@ -138,12 +140,12 @@ class ReflectorProtocol:
 
 @dataclass
 class ReflectorConnection:
-    """
-    Manages a connection to an M17 reflector.
+    """Manages a connection to an M17 reflector.
 
     Handles connection state, keep-alives, and message handling.
 
-    Attributes:
+    Attributes
+    ----------
         host: Reflector hostname or IP.
         port: Reflector port (default 17000).
         callsign: Local callsign.
@@ -176,27 +178,28 @@ class ReflectorConnection:
         return self._state == ConnectionState.CONNECTED
 
     @property
-    def addr(self) -> Tuple[str, int]:
+    def addr(self) -> tuple[str, int]:
         """Get reflector address tuple."""
         return (self.host, self.port)
 
     def set_frame_callback(self, callback: Callable[[IPFrame], None]) -> None:
-        """
-        Set callback for received M17 frames.
+        """Set callback for received M17 frames.
 
         Args:
+        ----
             callback: Function to call with received IPFrame.
         """
         self._frame_callback = callback
 
     def connect(self, timeout: float = 5.0) -> bool:
-        """
-        Connect to the reflector.
+        """Connect to the reflector.
 
         Args:
+        ----
             timeout: Connection timeout in seconds.
 
         Returns:
+        -------
             True if connected successfully.
         """
         if self._state != ConnectionState.DISCONNECTED:
@@ -268,10 +271,10 @@ class ReflectorConnection:
         logger.debug(f"SEND: {data[:4]!r} ({len(data)} bytes)")
 
     def send_frame(self, frame: IPFrame) -> None:
-        """
-        Send an M17 frame to the reflector.
+        """Send an M17 frame to the reflector.
 
         Args:
+        ----
             frame: IPFrame to send.
         """
         if not self.is_connected:
@@ -279,13 +282,14 @@ class ReflectorConnection:
         self._send(bytes(frame))
 
     def handle_message(self, data: bytes) -> Optional[IPFrame]:
-        """
-        Handle a received message.
+        """Handle a received message.
 
         Args:
+        ----
             data: Received bytes.
 
         Returns:
+        -------
             IPFrame if message was M17 data, None otherwise.
         """
         try:
@@ -318,13 +322,14 @@ class ReflectorConnection:
         return None
 
     def poll(self, timeout: float = 0.1) -> Optional[IPFrame]:
-        """
-        Poll for incoming messages.
+        """Poll for incoming messages.
 
         Args:
+        ----
             timeout: Poll timeout in seconds.
 
         Returns:
+        -------
             IPFrame if received, None otherwise.
         """
         if self._sock is None:
@@ -342,13 +347,13 @@ class ReflectorConnection:
 
 
 class M17ReflectorClient:
-    """
-    High-level async M17 reflector client.
+    """High-level async M17 reflector client.
 
     Provides an async interface for connecting to and communicating
     with M17 reflectors.
 
     Example:
+    -------
         async with M17ReflectorClient("N0CALL") as client:
             await client.connect("m17-usa.example.com", module="A")
             async for frame in client.receive_frames():
@@ -356,10 +361,10 @@ class M17ReflectorClient:
     """
 
     def __init__(self, callsign: str) -> None:
-        """
-        Initialize client.
+        """Initialize client.
 
         Args:
+        ----
             callsign: Local callsign.
         """
         self.callsign = callsign
@@ -381,16 +386,17 @@ class M17ReflectorClient:
         module: str = "A",
         timeout: float = 5.0,
     ) -> bool:
-        """
-        Connect to a reflector.
+        """Connect to a reflector.
 
         Args:
+        ----
             host: Reflector hostname or IP.
             port: Reflector port.
             module: Reflector module (A-Z).
             timeout: Connection timeout.
 
         Returns:
+        -------
             True if connected.
         """
         self._conn = ReflectorConnection(
@@ -419,10 +425,10 @@ class M17ReflectorClient:
         return self._conn is not None and self._conn.is_connected
 
     async def send_frame(self, frame: IPFrame) -> None:
-        """
-        Send an M17 frame.
+        """Send an M17 frame.
 
         Args:
+        ----
             frame: Frame to send.
         """
         if not self._conn:
@@ -431,16 +437,15 @@ class M17ReflectorClient:
         loop = asyncio.get_event_loop()
         await loop.run_in_executor(None, self._conn.send_frame, frame)
 
-    async def receive_frames(
-        self, poll_interval: float = 0.01
-    ) -> AsyncGenerator[IPFrame, None]:
-        """
-        Async generator for received frames.
+    async def receive_frames(self, poll_interval: float = 0.01) -> AsyncGenerator[IPFrame, None]:
+        """Async generator for received frames.
 
         Args:
+        ----
             poll_interval: Poll interval in seconds.
 
         Yields:
+        ------
             Received IPFrame objects.
         """
         if not self._conn:
@@ -449,9 +454,7 @@ class M17ReflectorClient:
         loop = asyncio.get_event_loop()
 
         while self._running and self._conn.is_connected:
-            frame = await loop.run_in_executor(
-                None, self._conn.poll, poll_interval
-            )
+            frame = await loop.run_in_executor(None, self._conn.poll, poll_interval)
             if frame:
                 yield frame
             else:

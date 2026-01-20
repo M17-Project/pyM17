@@ -1,12 +1,10 @@
-"""
-Tests for M17 CRC-16 implementation.
+"""Tests for M17 CRC-16 implementation.
 
 Test vectors from M17 specification.
 """
 
-import pytest
 
-from m17.core.crc import crc_m17, crc_m17_bytes, verify_crc, M17_CRC_POLY
+from m17.core.crc import M17_CRC_POLY, crc_m17, crc_m17_bytes, verify_crc
 
 
 class TestCRC:

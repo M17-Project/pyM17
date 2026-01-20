@@ -93,6 +93,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Network port constants** (`core/constants.py`)
   - `DEFAULT_DHT_PORT` (17001)
 
+- **CI/CD Infrastructure**
+  - GitHub Actions workflow (`.github/workflows/ci.yml`)
+    - pytest with coverage on push/PR
+    - mypy type checking
+    - ruff linting and format checking
+    - Codecov integration for coverage reporting
+  - Pre-commit hooks (`.pre-commit-config.yaml`)
+    - ruff (lint + format)
+    - mypy type checking
+    - poetry-check for pyproject.toml validation
+    - Standard hooks (trailing-whitespace, end-of-file-fixer, check-yaml, etc.)
+  - Codecov configuration (`codecov.yml`)
+  - Ruff configuration tuned for codebase
+    - Per-file ignores for legacy deprecated modules
+    - Relaxed docstring rules for test files
+    - Compatible docstring style settings (D211/D212)
+
 ### Deprecated
 
 - **Legacy modules now emit deprecation warnings**

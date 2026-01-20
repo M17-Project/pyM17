@@ -146,16 +146,24 @@ Remaining work items for pyM17 development.
 
 ### CI/CD
 
-- [ ] **GitHub Actions workflow**
-  - [ ] pytest on push/PR
-  - [ ] mypy type checking
-  - [ ] ruff/flake8 linting
-  - [ ] Coverage reporting to Codecov
-  - [ ] Automated PyPI publishing on release
+- [x] **GitHub Actions workflow** (2026-01-20)
+  - [x] pytest on push/PR
+  - [x] mypy type checking
+  - [x] ruff linting and format checking
+  - [x] Coverage reporting to Codecov
+  - [x] Automated PyPI publishing on release (already existed)
+  - Added `.github/workflows/ci.yml` with test, lint, and type-check jobs
+  - Added `codecov.yml` for coverage configuration
 
-- [ ] **Pre-commit hooks**
-  - [ ] Add `.pre-commit-config.yaml`
-  - [ ] Configure ruff, mypy, pytest
+- [x] **Pre-commit hooks** (2026-01-20)
+  - [x] Add `.pre-commit-config.yaml`
+  - [x] Configure ruff (lint + format), mypy, poetry-check
+  - [x] Add pre-commit to dev dependencies
+  - [x] Tune ruff configuration for codebase
+    - Per-file ignores for legacy deprecated modules
+    - Relaxed docstring rules for test files
+    - Compatible docstring style settings (D211/D212)
+  - Hooks: trailing-whitespace, end-of-file-fixer, check-yaml, check-toml, debug-statements
 
 ### Future Versions
 

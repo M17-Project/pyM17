@@ -1,13 +1,12 @@
-"""
-Tests for M17 Address encoding/decoding.
+"""Tests for M17 Address encoding/decoding.
 
 Tests both the new dataclass-based Address and legacy functionality.
 """
 
 import pytest
 
-from m17.core.address import Address, encode_callsign, decode_callsign
-from m17.core.constants import BROADCAST_ADDRESS, HASH_ADDRESS_MIN, HASH_ADDRESS_MAX
+from m17.core.address import Address, decode_callsign, encode_callsign
+from m17.core.constants import BROADCAST_ADDRESS, HASH_ADDRESS_MAX, HASH_ADDRESS_MIN
 
 
 class TestAddressEncoding:

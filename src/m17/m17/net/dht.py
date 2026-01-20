@@ -1,5 +1,4 @@
-"""
-M17 DHT-based Routing
+"""M17 DHT-based Routing
 
 Implements Kademlia DHT for decentralized M17 routing and discovery.
 
@@ -14,10 +13,11 @@ import asyncio
 import json
 import logging
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Optional
 
 try:
     from kademlia.network import Server
+
     HAS_KADEMLIA = True
 except ImportError:
     HAS_KADEMLIA = False
@@ -36,16 +36,16 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class DHTConfig:
-    """
-    DHT configuration.
+    """DHT configuration.
 
-    Attributes:
+    Attributes
+    ----------
         port: Local DHT port.
         bootstrap_nodes: List of (host, port) tuples for bootstrapping (required).
         registration_interval: Seconds between re-registration.
     """
 
-    bootstrap_nodes: List[Tuple[str, int]]
+    bootstrap_nodes: list[tuple[str, int]]
     port: int = DEFAULT_DHT_PORT
     registration_interval: float = 15.0
 
@@ -59,12 +59,12 @@ class DHTConfig:
 
 @dataclass
 class M17DHTNode:
-    """
-    M17 DHT Node.
+    """M17 DHT Node.
 
     Provides DHT-based callsign routing and discovery.
 
     Example:
+    -------
         async with M17DHTNode("N0CALL", "192.168.1.100") as node:
             await node.start()
             location = await node.lookup("W2FBI")
@@ -73,7 +73,7 @@ class M17DHTNode:
 
     callsign: str
     host: str
-    config: DHTConfig = field(default_factory=DHTConfig)
+    config: DHTConfig
     _server: Any = field(default=None, init=False)
     _running: bool = field(default=False, init=False)
     _register_task: Optional[asyncio.Task] = field(default=None, init=False)
@@ -82,8 +82,7 @@ class M17DHTNode:
         """Validate kademlia availability."""
         if not HAS_KADEMLIA:
             raise ImportError(
-                "kademlia library not installed. "
-                "Install with: pip install kademlia"
+                "kademlia library not installed. " "Install with: pip install kademlia"
             )
         self._server = Server()
 
@@ -96,10 +95,10 @@ class M17DHTNode:
         await self.stop()
 
     async def start(self, should_bootstrap: bool = True) -> None:
-        """
-        Start the DHT node.
+        """Start the DHT node.
 
         Args:
+        ----
             should_bootstrap: Whether to bootstrap from known nodes.
         """
         if self._running:
@@ -142,8 +141,7 @@ class M17DHTNode:
             await asyncio.sleep(self.config.registration_interval)
 
     async def register(self) -> None:
-        """
-        Register this node in the DHT.
+        """Register this node in the DHT.
 
         Stores both callsign -> location and location -> callsign mappings.
         """
@@ -160,14 +158,15 @@ class M17DHTNode:
 
         logger.debug(f"Registered {self.callsign} at {location}")
 
-    async def lookup(self, callsign: str) -> Optional[Tuple[str, int]]:
-        """
-        Look up a callsign in the DHT.
+    async def lookup(self, callsign: str) -> Optional[tuple[str, int]]:
+        """Look up a callsign in the DHT.
 
         Args:
+        ----
             callsign: Callsign to look up.
 
         Returns:
+        -------
             (host, port) tuple if found, None otherwise.
         """
         if not self._server:
@@ -184,14 +183,15 @@ class M17DHTNode:
         return None
 
     async def reverse_lookup(self, host: str, port: int) -> Optional[str]:
-        """
-        Reverse lookup: find callsign for a host/port.
+        """Reverse lookup: find callsign for a host/port.
 
         Args:
+        ----
             host: Host address.
             port: Port number.
 
         Returns:
+        -------
             Callsign if found, None otherwise.
         """
         if not self._server:

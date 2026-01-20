@@ -1,5 +1,4 @@
-"""
-pyM17 - Python M17 Protocol Library
+"""pyM17 - Python M17 Protocol Library
 
 A modern Python implementation of the M17 digital radio protocol,
 compliant with M17 specification v2.0.3.
@@ -42,42 +41,42 @@ logger = logging.getLogger(__name__)
 
 # Core components
 from m17.core import (
-    # CRC
-    crc_m17,
+    BROADCAST_ADDRESS,
+    CALLSIGN_ALPHABET,
+    DEFAULT_PORT,
+    EOT_MARKER,
     M17_CRC_POLY,
-    # Address
-    Address,
-    # Types
-    M17Type,
-    M17DataType,
-    M17EncryptionType,
-    M17EncryptionSubtype,
-    M17MetaType,
-    ChannelAccessNumber,
+    M17_MAGIC_NUMBER,
+    SYNC_BERT,
     # Constants
     SYNC_LSF,
-    SYNC_STREAM,
     SYNC_PACKET,
-    SYNC_BERT,
-    EOT_MARKER,
-    CALLSIGN_ALPHABET,
-    M17_MAGIC_NUMBER,
-    DEFAULT_PORT,
-    BROADCAST_ADDRESS,
+    SYNC_STREAM,
+    # Address
+    Address,
+    ChannelAccessNumber,
+    M17DataType,
+    M17EncryptionSubtype,
+    M17EncryptionType,
+    M17MetaType,
+    # Types
+    M17Type,
+    # CRC
+    crc_m17,
 )
 
 # Frame types
 from m17.frames import (
-    LinkSetupFrame,
-    StreamFrame,
-    PacketFrame,
     IPFrame,
-    LICHFrame,
     LICHChunk,
+    LICHFrame,
+    LinkSetupFrame,
     M17Payload,
-    MetaPosition,
     MetaExtendedCallsign,
     MetaNonce,
+    MetaPosition,
+    PacketFrame,
+    StreamFrame,
 )
 
 # =============================================================================
@@ -93,10 +92,16 @@ except ImportError as e:
 
 try:
     from m17.frames import (
-        LICHFrame as _LegacyLICHFrame,
-        RegularFrame,
         IPFrame as _LegacyIPFrame,
+    )
+    from m17.frames import (
+        LICHFrame as _LegacyLICHFrame,
+    )
+    from m17.frames import (
         M17Payload as _LegacyM17Payload,
+    )
+    from m17.frames import (
+        RegularFrame,
     )
 except ImportError as e:
     # If old frames module fails, RegularFrame comes from new module

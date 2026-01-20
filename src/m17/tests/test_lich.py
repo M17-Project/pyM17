@@ -1,14 +1,13 @@
-"""
-Tests for M17 LICH (Link Information Channel) Frame Handling
+"""Tests for M17 LICH (Link Information Channel) Frame Handling
 
 Tests for LICHFrame, LICHChunk, and LICHCollector classes.
 """
 
 import pytest
 
-from m17.frames.lich import LICHFrame, LICHChunk, LICHCollector
-from m17.frames.lsf import LinkSetupFrame
 from m17.core.address import Address
+from m17.frames.lich import LICHChunk, LICHCollector, LICHFrame
+from m17.frames.lsf import LinkSetupFrame
 
 
 class TestLICHChunk:

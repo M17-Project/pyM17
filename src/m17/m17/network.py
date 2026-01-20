@@ -1,5 +1,4 @@
-"""
-M17 Networking (Legacy Module)
+"""M17 Networking (Legacy Module)
 
 This module contains legacy networking code for M17.
 
@@ -26,54 +25,50 @@ import sys
 import threading
 import time
 import warnings
-from typing import Any, Awaitable, Callable, Dict, List, Optional, Tuple, Union
+from collections.abc import Awaitable, Callable
+from typing import Any, Optional, Union
 
 from kademlia.network import Server
 
 import m17
 import m17.address
 import m17.misc
-from m17.misc import DictDotAttribute
 from m17.core.constants import (
-    DEFAULT_PORT,
-    DEFAULT_DHT_PORT,
     get_reflector_host,
 )
+from m17.misc import DictDotAttribute
 
 logger = logging.getLogger(__name__)
 
 # Emit deprecation warning on module import
 warnings.warn(
-    "m17.network is deprecated and will be removed in v1.0. "
-    "Use the m17.net package instead.",
+    "m17.network is deprecated and will be removed in v1.0. " "Use the m17.net package instead.",
     DeprecationWarning,
     stacklevel=2,
 )
 
-primaries: List[Tuple[str, int]] = []  # Must be explicitly configured
-dhtbootstraps: List[Tuple[str, int]] = []  # Must be explicitly configured
+primaries: list[tuple[str, int]] = []  # Must be explicitly configured
+dhtbootstraps: list[tuple[str, int]] = []  # Must be explicitly configured
 
 
 def m17ref_name2host(refname: str, domain: str) -> str:
-    """
-    Convert a reflector name to a hostname.
+    """Convert a reflector name to a hostname.
 
     Args:
+    ----
         refname: Reflector name (e.g., "M17-ABC").
         domain: Reflector domain suffix (required, e.g., "m17ref.example.com").
 
     Returns:
+    -------
         Full hostname (e.g., "M17-ABC.m17ref.example.com").
     """
     return get_reflector_host(refname, domain)
 
+
 class n7tae_reflector_conn:
     def __init__(
-        self,
-        sock: socket.socket,
-        conn: Tuple[str, int],
-        mycallsign: str,
-        theirmodule: str = "A"
+        self, sock: socket.socket, conn: tuple[str, int], mycallsign: str, theirmodule: str = "A"
     ) -> None:
         self.module = theirmodule
         self.sock = sock
@@ -98,7 +93,7 @@ class n7tae_reflector_conn:
         logger.debug("TAE SEND: %s", data)
         self.sock.sendto(data, self.conn)
 
-    def handle(self, pkt: bytes, conn: Tuple[str, int]) -> None:
+    def handle(self, pkt: bytes, conn: tuple[str, int]) -> None:
         if pkt.startswith(b"PING"):
             self.pong()
         elif pkt.startswith(b"ACKN"):
@@ -118,7 +113,9 @@ class msgtype(enum.Enum):
     i_am_here = 1  # remote host asks to tie their host and callsign together
     where_is = 2  # getting a query for a stored callsign
     is_at = 3  # getting a reply to a query
-    introduce_me = 4  # got a request: please introduce me to host, i'm trying to talk to them on port...
+    introduce_me = (
+        4  # got a request: please introduce me to host, i'm trying to talk to them on port...
+    )
     introducing = 5  # got an intro: I have an introduction for you, please contact ...
     hi = 6  # got an "oh hey" packet
 
@@ -135,25 +132,22 @@ class msgtype(enum.Enum):
 
 
 class m17_networking_direct:
-    def __init__(
-        self,
-        primaries: List[Tuple[str, int]],
-        callsign: str,
-        port: int = 17000
-    ) -> None:
+    def __init__(self, primaries: list[tuple[str, int]], callsign: str, port: int = 17000) -> None:
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.sock.bind(("0.0.0.0", port))
         self.sock.setblocking(False)
         # self.sock.bind( ("::1", 17000) )
 
-        self.recvQ: queue.Queue[Tuple[bytes, Tuple[str, int]]] = queue.Queue()
-        self.sendQ: queue.Queue[Tuple[bytes, Tuple[str, int]]] = queue.Queue()
+        self.recvQ: queue.Queue[tuple[bytes, tuple[str, int]]] = queue.Queue()
+        self.sendQ: queue.Queue[tuple[bytes, tuple[str, int]]] = queue.Queue()
         network_thread = threading.Thread(target=self.networker, args=(self.recvQ, self.sendQ))
         network_thread.start()
 
-        self.conns: Dict[Union[str, Tuple[str, int]], DictDotAttribute] = {}  # i was intending this for client side, not sure it makes sense
+        self.conns: dict[
+            Union[str, tuple[str, int]], DictDotAttribute
+        ] = {}  # i was intending this for client side, not sure it makes sense
 
-        self.whereis: Dict[Union[str, Tuple[str, int]], Tuple[float, Any]] = {}
+        self.whereis: dict[Union[str, tuple[str, int]], tuple[float, Any]] = {}
 
         self.primaries = primaries
         self.callsign = callsign
@@ -166,11 +160,10 @@ class m17_networking_direct:
 
     def networker(
         self,
-        recvq: queue.Queue[Tuple[bytes, Tuple[str, int]]],
-        sendq: queue.Queue[Tuple[bytes, Tuple[str, int]]]
+        recvq: queue.Queue[tuple[bytes, tuple[str, int]]],
+        sendq: queue.Queue[tuple[bytes, tuple[str, int]]],
     ) -> None:
-        """
-        """
+        """ """
         while 1:
             try:
                 data, conn = self.sock.recvfrom(1500)
@@ -182,13 +175,13 @@ class m17_networking_direct:
                 data, conn = sendq.get_nowait()
                 logger.debug("SEND %s %s", conn, data)
                 self.sock.sendto(data, conn)
-            time.sleep(.0001)
+            time.sleep(0.0001)
 
     def loop(self) -> None:
         def looper(self: m17_networking_direct) -> None:
             while 1:
                 self.loop_once()
-                time.sleep(.005)
+                time.sleep(0.005)
 
         self.looper = threading.Thread(target=looper, args=(self,))
         self.looper.start()
@@ -203,10 +196,12 @@ class m17_networking_direct:
             data, conn = self.recvQ.get_nowait()
             logger.debug("Recv: %s %s", data, conn)
             if conn[0] not in self.conns:
-                self.conns[conn] = DictDotAttribute({
-                    "last": time.time(),
-                    "conn": conn,
-                })
+                self.conns[conn] = DictDotAttribute(
+                    {
+                        "last": time.time(),
+                        "conn": conn,
+                    }
+                )
                 logger.debug("New connection: %s", self.conns)
             else:
                 self.conns[conn[0]].last = time.time()
@@ -214,16 +209,17 @@ class m17_networking_direct:
         # self.clean_conns()
         # self.clean_whereis()
 
-    def M17J_send(self, payload: bytes, conn: Tuple[str, int]) -> None:
+    def M17J_send(self, payload: bytes, conn: tuple[str, int]) -> None:
         # print("Sending to %s M17J %s"%(conn,payload))
         self.sendQ.put((b"M17J" + payload, conn))
 
-    def process_packet(self, payload: bytes, conn: Tuple[str, int]) -> None:
+    def process_packet(self, payload: bytes, conn: tuple[str, int]) -> None:
         if payload.startswith(b"M17 "):
             ...
             # voice and data packets
         elif payload.startswith(
-                b"M17J"):  # M17 Json development and evaluation protocol - the standard is, there is no standard
+            b"M17J"
+        ):  # M17 Json development and evaluation protocol - the standard is, there is no standard
             msg = DictDotAttribute(json.loads(payload[4:].decode("utf-8")))
             if msg.msgtype == msgtype.where_am_i:
                 self.reg_store(msg.callsign, conn)  # so we store it
@@ -247,27 +243,22 @@ class m17_networking_direct:
         else:
             logger.warning("Unrecognized payload: %s", payload)
 
-    def reg_fetch(self, callsign: str) -> Tuple[float, Tuple[str, int]]:
+    def reg_fetch(self, callsign: str) -> tuple[float, tuple[str, int]]:
         """Fetch registration by callsign."""
         result = self.whereis[callsign]
         return (result[0], result[1])
 
-    def answer_where_is(
-        self,
-        conn: Tuple[str, int],
-        callsign: str,
-        loc: Tuple[str, int]
-    ) -> None:
+    def answer_where_is(self, conn: tuple[str, int], callsign: str, loc: tuple[str, int]) -> None:
         """Answer a where-is query."""
         addr = m17.address.Address.encode(callsign)
-        payload = json.dumps({"msgtype": "is at", "m17_addr": addr.hex(), "host": loc[0]}).encode("utf-8")
+        payload = json.dumps({"msgtype": "is at", "m17_addr": addr.hex(), "host": loc[0]}).encode(
+            "utf-8"
+        )
         self.M17J_send(payload, conn)
 
     # user registration handling starts here
     def registration_keepalive(self) -> None:
-        """
-        Periodically re-register
-        """
+        """Periodically re-register"""
         if not self.callsign:
             return
         sincelastrun = time.time() - self.last
@@ -276,20 +267,20 @@ class m17_networking_direct:
                 self.register_me_with(primary)
             self.last = time.time()
 
-    def register_me_with(self, server: Tuple[str, int]) -> None:
+    def register_me_with(self, server: tuple[str, int]) -> None:
         payload = json.dumps({"msgtype": "i am here", "callsign": self.callsign}).encode("utf-8")
         self.M17J_send(payload, server)
 
-    def reg_store(self, callsign: str, conn: Tuple[str, int]) -> None:
+    def reg_store(self, callsign: str, conn: tuple[str, int]) -> None:
         logger.debug("[M17 registration] %s -> %s", callsign, conn)
         self.whereis[callsign] = (time.time(), conn)
         self.whereis[conn] = (time.time(), callsign)
 
-    def reg_fetch_by_callsign(self, callsign: str) -> Tuple[float, Tuple[str, int]]:
+    def reg_fetch_by_callsign(self, callsign: str) -> tuple[float, tuple[str, int]]:
         result = self.whereis[callsign]
         return (result[0], result[1])
 
-    def reg_fetch_by_conn(self, conn: Tuple[str, int]) -> Tuple[float, str]:
+    def reg_fetch_by_conn(self, conn: tuple[str, int]) -> tuple[float, str]:
         result = self.whereis[conn]
         return (result[0], str(result[1]))
 
@@ -311,7 +302,7 @@ class m17_networking_direct:
         for introducer in self.primaries:
             self.M17J_send(payload, introducer)
 
-    def arrange_rendezvous(self, conn: Tuple[str, int], msg: DictDotAttribute) -> None:
+    def arrange_rendezvous(self, conn: tuple[str, int], msg: DictDotAttribute) -> None:
         # requires peer1 and peer2 both be connected live to self (e.g. keepalives)
         # sent to opposing peer with other sides host and expected port
         try:
@@ -322,17 +313,28 @@ class m17_networking_direct:
             logging.error("Missing a registration, didn't find %s" % (e))
             return
         payload = json.dumps(
-            {"msgtype": "introducing", "callsign": requestor_callsign, "host": conn[0], "port": conn[1]}).encode(
-            "utf-8")
-        self.M17J_send(payload,
-                       theirconn)  # this port needs to be from our existing list of connections appropriate to the _callsign_
+            {
+                "msgtype": "introducing",
+                "callsign": requestor_callsign,
+                "host": conn[0],
+                "port": conn[1],
+            }
+        ).encode("utf-8")
+        self.M17J_send(
+            payload, theirconn
+        )  # this port needs to be from our existing list of connections appropriate to the _callsign_
         # we need to arrange the port too, don't we?
         payload = json.dumps(
-            {"msgtype": "introducing", "callsign": target_callsign, "host": theirconn[0], "port": theirconn[1]}).encode(
-            "utf-8")
+            {
+                "msgtype": "introducing",
+                "callsign": target_callsign,
+                "host": theirconn[0],
+                "port": theirconn[1],
+            }
+        ).encode("utf-8")
         self.M17J_send(payload, conn)  # this one we can reply to directly, of course
 
-    def attempt_rendezvous(self, conn: Tuple[str, int], msg: DictDotAttribute) -> None:
+    def attempt_rendezvous(self, conn: tuple[str, int], msg: DictDotAttribute) -> None:
         payload = json.dumps({"msgtype": "hi!", "callsign": self.callsign}).encode("utf-8")
         self.M17J_send(payload, (msg.host, msg.port))
 
@@ -350,7 +352,7 @@ class m17_networking_direct:
         self.callsign_connect(callsign)
         start = time.time()
         while not self.have_link(callsign):
-            time.sleep(.003)
+            time.sleep(0.003)
             if time.time() - start > 3:
                 return False
         # TODO now start the auto-keepalives here
@@ -358,10 +360,7 @@ class m17_networking_direct:
 
 
 async def repeat(
-    interval: float,
-    func: Callable[..., Awaitable[Any]],
-    *args: Any,
-    **kwargs: Any
+    interval: float, func: Callable[..., Awaitable[Any]], *args: Any, **kwargs: Any
 ) -> None:
     """Run func every interval seconds.
 
@@ -379,9 +378,7 @@ async def repeat(
 
 
 class m17_networking_dht:
-    """
-    https://github.com/bmuller/kademlia
-
+    """https://github.com/bmuller/kademlia
 
     real p2p for callsign lookup and introductions?
     visualization tool for reading logs and a config to see packets and streams
@@ -436,7 +433,7 @@ class m17_networking_dht:
         callsign: str,
         myhost: str,
         port: int,
-        bootstrap_nodes: Optional[List[Tuple[str, int]]] = None
+        bootstrap_nodes: Optional[list[tuple[str, int]]] = None,
     ) -> None:
         self.callsign = callsign
         self.host = myhost
@@ -465,12 +462,13 @@ class m17_networking_dht:
 
 
 if __name__ == "__main__":
+
     def loop_once(loop: asyncio.AbstractEventLoop) -> None:
         loop.stop()
         loop.run_forever()
 
-
     if sys.argv[1] == "dhtclient":
+
         async def run() -> None:
             server = Server()
             await server.listen(8469)
@@ -489,7 +487,7 @@ if __name__ == "__main__":
             while 1:
                 logger.debug("DHT server loop iteration")
                 loop_once(loop)
-                time.sleep(.5)
+                time.sleep(0.5)
             # loop.run_forever()
         except KeyboardInterrupt:
             pass
@@ -501,7 +499,7 @@ if __name__ == "__main__":
         host = sys.argv[3]
         # Parse bootstrap nodes from command line (optional)
         # Usage: python -m m17.network dht CALLSIGN HOST [bootstrap_host:port ...]
-        bootstrap_nodes: List[Tuple[str, int]] = []
+        bootstrap_nodes: list[tuple[str, int]] = []
         for arg in sys.argv[4:]:
             if ":" in arg:
                 bhost, bport = arg.rsplit(":", 1)

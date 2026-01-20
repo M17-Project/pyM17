@@ -1,5 +1,4 @@
-"""
-M17 Puncturing Patterns
+"""M17 Puncturing Patterns
 
 Puncturing removes some bits from the convolutional encoder output
 to achieve different code rates while maintaining error correction.
@@ -14,8 +13,6 @@ Port from libm17/encode/convol.c
 
 from __future__ import annotations
 
-from typing import List, Tuple
-
 __all__ = [
     "puncture",
     "depuncture",
@@ -26,34 +23,93 @@ __all__ = [
 
 # P1: Puncture pattern for Link Setup Frames (LSF)
 # 61 elements, removes roughly 1 in 4 bits
-PUNCTURE_P1: Tuple[int, ...] = (
-    1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1,
-    1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1,
-    1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1,
-    1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1,
+PUNCTURE_P1: tuple[int, ...] = (
+    1,
+    1,
+    0,
+    1,
+    1,
+    1,
+    0,
+    1,
+    1,
+    1,
+    0,
+    1,
+    1,
+    1,
+    0,
+    1,
+    1,
+    1,
+    0,
+    1,
+    1,
+    1,
+    0,
+    1,
+    1,
+    1,
+    0,
+    1,
+    1,
+    1,
+    0,
+    1,
+    1,
+    1,
+    0,
+    1,
+    1,
+    1,
+    0,
+    1,
+    1,
+    1,
+    0,
+    1,
+    1,
+    1,
+    0,
+    1,
+    1,
+    1,
+    0,
+    1,
+    1,
+    1,
+    0,
+    1,
+    1,
+    1,
+    0,
+    1,
+    1,
 )
 
 # P2: Puncture pattern for stream frames and BERT
 # 12 elements, removes 1 of every 12 bits
-PUNCTURE_P2: Tuple[int, ...] = (1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0)
+PUNCTURE_P2: tuple[int, ...] = (1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0)
 
 # P3: Puncture pattern for packet frames
 # 8 elements, removes 1 of every 8 bits
-PUNCTURE_P3: Tuple[int, ...] = (1, 1, 1, 1, 1, 1, 1, 0)
+PUNCTURE_P3: tuple[int, ...] = (1, 1, 1, 1, 1, 1, 1, 0)
 
 
-def puncture(bits: List[int], pattern: Tuple[int, ...]) -> List[int]:
-    """
-    Apply puncturing pattern to remove bits.
+def puncture(bits: list[int], pattern: tuple[int, ...]) -> list[int]:
+    """Apply puncturing pattern to remove bits.
 
     Args:
+    ----
         bits: Input bit list.
         pattern: Puncture pattern (1 = keep, 0 = remove).
 
     Returns:
+    -------
         Punctured bit list.
 
     Examples:
+    --------
         >>> puncture([0,1,0,1,0,1,0,1,0,1,0,1], PUNCTURE_P2)
         [0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0]
     """
@@ -69,24 +125,24 @@ def puncture(bits: List[int], pattern: Tuple[int, ...]) -> List[int]:
     return output
 
 
-def depuncture(
-    bits: List[int], pattern: Tuple[int, ...], fill_value: int = 0x7FFF
-) -> List[int]:
-    """
-    Reverse puncturing by inserting erasure values.
+def depuncture(bits: list[int], pattern: tuple[int, ...], fill_value: int = 0x7FFF) -> list[int]:
+    """Reverse puncturing by inserting erasure values.
 
     For soft decoding, the fill_value should be 0x7FFF (uncertain).
     For hard decoding, use 0.
 
     Args:
+    ----
         bits: Punctured bit list.
         pattern: Puncture pattern used.
         fill_value: Value to insert for punctured positions.
 
     Returns:
+    -------
         Depunctured bit list with erasures.
 
     Examples:
+    --------
         >>> depuncture([0,1,0,1,0,1,0,1,0,1,0], PUNCTURE_P2, fill_value=2)
         [0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 2]
     """
@@ -113,14 +169,15 @@ def depuncture(
     return output
 
 
-def puncture_lsf(bits: List[int]) -> List[int]:
-    """
-    Puncture LSF encoded bits using P1 pattern.
+def puncture_lsf(bits: list[int]) -> list[int]:
+    """Puncture LSF encoded bits using P1 pattern.
 
     Args:
+    ----
         bits: 488 encoded bits.
 
     Returns:
+    -------
         368 punctured bits.
     """
     if len(bits) != 488:
@@ -129,14 +186,15 @@ def puncture_lsf(bits: List[int]) -> List[int]:
     return puncture(bits, PUNCTURE_P1)
 
 
-def puncture_stream(bits: List[int]) -> List[int]:
-    """
-    Puncture stream frame encoded bits using P2 pattern.
+def puncture_stream(bits: list[int]) -> list[int]:
+    """Puncture stream frame encoded bits using P2 pattern.
 
     Args:
+    ----
         bits: 296 encoded bits.
 
     Returns:
+    -------
         272 punctured bits.
     """
     if len(bits) != 296:
@@ -145,14 +203,15 @@ def puncture_stream(bits: List[int]) -> List[int]:
     return puncture(bits, PUNCTURE_P2)
 
 
-def puncture_packet(bits: List[int]) -> List[int]:
-    """
-    Puncture packet frame encoded bits using P3 pattern.
+def puncture_packet(bits: list[int]) -> list[int]:
+    """Puncture packet frame encoded bits using P3 pattern.
 
     Args:
+    ----
         bits: 420 encoded bits.
 
     Returns:
+    -------
         368 punctured bits.
     """
     if len(bits) != 420:
@@ -161,14 +220,15 @@ def puncture_packet(bits: List[int]) -> List[int]:
     return puncture(bits, PUNCTURE_P3)
 
 
-def puncture_bert(bits: List[int]) -> List[int]:
-    """
-    Puncture BERT frame encoded bits using P2 pattern.
+def puncture_bert(bits: list[int]) -> list[int]:
+    """Puncture BERT frame encoded bits using P2 pattern.
 
     Args:
+    ----
         bits: 402 encoded bits.
 
     Returns:
+    -------
         368 punctured bits.
     """
     if len(bits) != 402:
@@ -177,43 +237,46 @@ def puncture_bert(bits: List[int]) -> List[int]:
     return puncture(bits, PUNCTURE_P2)
 
 
-def depuncture_lsf(bits: List[int], fill_value: int = 0x7FFF) -> List[int]:
-    """
-    Depuncture LSF bits for decoding.
+def depuncture_lsf(bits: list[int], fill_value: int = 0x7FFF) -> list[int]:
+    """Depuncture LSF bits for decoding.
 
     Args:
+    ----
         bits: 368 punctured bits.
         fill_value: Value for erasure positions.
 
     Returns:
+    -------
         488 depunctured bits.
     """
     return depuncture(bits, PUNCTURE_P1, fill_value)
 
 
-def depuncture_stream(bits: List[int], fill_value: int = 0x7FFF) -> List[int]:
-    """
-    Depuncture stream frame bits for decoding.
+def depuncture_stream(bits: list[int], fill_value: int = 0x7FFF) -> list[int]:
+    """Depuncture stream frame bits for decoding.
 
     Args:
+    ----
         bits: 272 punctured bits.
         fill_value: Value for erasure positions.
 
     Returns:
+    -------
         296 depunctured bits.
     """
     return depuncture(bits, PUNCTURE_P2, fill_value)
 
 
-def depuncture_packet(bits: List[int], fill_value: int = 0x7FFF) -> List[int]:
-    """
-    Depuncture packet frame bits for decoding.
+def depuncture_packet(bits: list[int], fill_value: int = 0x7FFF) -> list[int]:
+    """Depuncture packet frame bits for decoding.
 
     Args:
+    ----
         bits: 368 punctured bits.
         fill_value: Value for erasure positions.
 
     Returns:
+    -------
         420 depunctured bits.
     """
     return depuncture(bits, PUNCTURE_P3, fill_value)

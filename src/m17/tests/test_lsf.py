@@ -1,20 +1,18 @@
-"""
-Tests for M17 Link Setup Frame (LSF).
+"""Tests for M17 Link Setup Frame (LSF).
 """
 
-import pytest
 
+from m17.core.address import Address
+from m17.core.types import M17DataType, M17Type
 from m17.frames.lsf import (
+    DataSource,
     LinkSetupFrame,
-    MetaPosition,
     MetaExtendedCallsign,
     MetaNonce,
-    DataSource,
+    MetaPosition,
     StationType,
     ValidityField,
 )
-from m17.core.address import Address
-from m17.core.types import M17Type, M17DataType
 
 
 class TestLinkSetupFrame:

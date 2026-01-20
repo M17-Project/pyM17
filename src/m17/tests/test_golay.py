@@ -1,17 +1,16 @@
-"""
-Tests for M17 Golay(24,12) codec.
+"""Tests for M17 Golay(24,12) codec.
 """
 
 import pytest
 
 from m17.codec.golay import (
-    golay24_encode,
-    golay24_decode,
-    golay24_sdecode,
-    encode_lich,
-    decode_lich,
-    ENCODE_MATRIX,
     DECODE_MATRIX,
+    ENCODE_MATRIX,
+    decode_lich,
+    encode_lich,
+    golay24_decode,
+    golay24_encode,
+    golay24_sdecode,
 )
 
 

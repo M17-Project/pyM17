@@ -1,5 +1,4 @@
-"""
-Tests for M17 networking modules.
+"""Tests for M17 networking modules.
 
 Tests cover:
 - m17.net.reflector - Reflector protocol and client
@@ -8,18 +7,14 @@ Tests cover:
 - m17.net.client - High-level network client
 """
 
-import asyncio
 import json
 import socket
 import time
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
-from m17.core.address import Address
 from m17.frames.ip import IPFrame
-from m17.frames.lsf import LinkSetupFrame
-
 
 # =============================================================================
 # Reflector Protocol Tests
@@ -31,7 +26,6 @@ class TestReflectorProtocol:
 
     def test_import(self):
         """Test that reflector module can be imported."""
-        from m17.net.reflector import ReflectorProtocol
 
     def test_make_connect(self):
         """Test CONN message creation."""
@@ -87,7 +81,7 @@ class TestReflectorProtocol:
 
     def test_parse_message_ackn(self):
         """Test parsing ACKN message."""
-        from m17.net.reflector import ReflectorProtocol, ReflectorMessage
+        from m17.net.reflector import ReflectorMessage, ReflectorProtocol
 
         msg_type, payload = ReflectorProtocol.parse_message(b"ACKN\x00\x00\x00\x00")
 
@@ -96,7 +90,7 @@ class TestReflectorProtocol:
 
     def test_parse_message_nack(self):
         """Test parsing NACK message."""
-        from m17.net.reflector import ReflectorProtocol, ReflectorMessage
+        from m17.net.reflector import ReflectorMessage, ReflectorProtocol
 
         msg_type, payload = ReflectorProtocol.parse_message(b"NACK")
 
@@ -105,7 +99,7 @@ class TestReflectorProtocol:
 
     def test_parse_message_ping(self):
         """Test parsing PING message."""
-        from m17.net.reflector import ReflectorProtocol, ReflectorMessage
+        from m17.net.reflector import ReflectorMessage, ReflectorProtocol
 
         msg_type, payload = ReflectorProtocol.parse_message(b"PING")
 
@@ -113,7 +107,7 @@ class TestReflectorProtocol:
 
     def test_parse_message_pong(self):
         """Test parsing PONG message."""
-        from m17.net.reflector import ReflectorProtocol, ReflectorMessage
+        from m17.net.reflector import ReflectorMessage, ReflectorProtocol
 
         msg_type, payload = ReflectorProtocol.parse_message(b"PONG\x01\x02\x03")
 
@@ -122,7 +116,7 @@ class TestReflectorProtocol:
 
     def test_parse_message_m17_frame(self):
         """Test parsing M17 frame message."""
-        from m17.net.reflector import ReflectorProtocol, ReflectorMessage
+        from m17.net.reflector import ReflectorMessage, ReflectorProtocol
 
         msg_type, payload = ReflectorProtocol.parse_message(b"M17 " + bytes(50))
 
@@ -179,7 +173,7 @@ class TestReflectorConnection:
 
     def test_create(self):
         """Test creating a reflector connection."""
-        from m17.net.reflector import ReflectorConnection, ConnectionState
+        from m17.net.reflector import ConnectionState, ReflectorConnection
 
         conn = ReflectorConnection(
             host="reflector.example.com",
@@ -229,7 +223,7 @@ class TestReflectorConnection:
 
     def test_disconnect_when_not_connected(self):
         """Test disconnect when not connected is no-op."""
-        from m17.net.reflector import ReflectorConnection, ConnectionState
+        from m17.net.reflector import ConnectionState, ReflectorConnection
 
         conn = ReflectorConnection(host="test.example.com")
         conn.disconnect()
@@ -239,7 +233,7 @@ class TestReflectorConnection:
     @patch("socket.socket")
     def test_connect_success(self, mock_socket_class):
         """Test successful connection."""
-        from m17.net.reflector import ReflectorConnection, ConnectionState
+        from m17.net.reflector import ConnectionState, ReflectorConnection
 
         mock_sock = MagicMock()
         mock_socket_class.return_value = mock_sock
@@ -263,7 +257,7 @@ class TestReflectorConnection:
     @patch("socket.socket")
     def test_connect_nack(self, mock_socket_class):
         """Test connection refused (NACK)."""
-        from m17.net.reflector import ReflectorConnection, ConnectionState
+        from m17.net.reflector import ConnectionState, ReflectorConnection
 
         mock_sock = MagicMock()
         mock_socket_class.return_value = mock_sock
@@ -279,7 +273,7 @@ class TestReflectorConnection:
     @patch("socket.socket")
     def test_connect_timeout(self, mock_socket_class):
         """Test connection timeout."""
-        from m17.net.reflector import ReflectorConnection, ConnectionState
+        from m17.net.reflector import ConnectionState, ReflectorConnection
 
         mock_sock = MagicMock()
         mock_socket_class.return_value = mock_sock
@@ -295,7 +289,7 @@ class TestReflectorConnection:
     @patch("socket.socket")
     def test_connect_already_connected(self, mock_socket_class):
         """Test connecting when already connected."""
-        from m17.net.reflector import ReflectorConnection, ConnectionState
+        from m17.net.reflector import ReflectorConnection
 
         mock_sock = MagicMock()
         mock_socket_class.return_value = mock_sock
@@ -380,7 +374,7 @@ class TestReflectorConnection:
     @patch("socket.socket")
     def test_handle_message_nack(self, mock_socket_class):
         """Test handling NACK message sets error state."""
-        from m17.net.reflector import ReflectorConnection, ConnectionState
+        from m17.net.reflector import ConnectionState, ReflectorConnection
 
         mock_sock = MagicMock()
         mock_socket_class.return_value = mock_sock
@@ -435,7 +429,7 @@ class TestReflectorConnection:
     @patch("socket.socket")
     def test_disconnect_sends_disc(self, mock_socket_class):
         """Test disconnect sends DISC message."""
-        from m17.net.reflector import ReflectorConnection, ConnectionState
+        from m17.net.reflector import ConnectionState, ReflectorConnection
 
         mock_sock = MagicMock()
         mock_socket_class.return_value = mock_sock
@@ -638,8 +632,8 @@ class TestP2PManager:
 
     def test_default_port(self):
         """Test default port."""
-        from m17.net.p2p import P2PManager
         from m17.core.constants import DEFAULT_PORT
+        from m17.net.p2p import P2PManager
 
         manager = P2PManager(
             callsign="N0CALL",
@@ -697,7 +691,7 @@ class TestP2PManager:
     @patch("socket.socket")
     async def test_register(self, mock_socket_class):
         """Test register sends I_AM_HERE to primaries."""
-        from m17.net.p2p import P2PManager, MessageType
+        from m17.net.p2p import MessageType, P2PManager
 
         mock_sock = MagicMock()
         mock_socket_class.return_value = mock_sock
@@ -727,7 +721,7 @@ class TestP2PManager:
     @patch("socket.socket")
     async def test_lookup(self, mock_socket_class):
         """Test lookup sends WHERE_IS to primaries."""
-        from m17.net.p2p import P2PManager, MessageType
+        from m17.net.p2p import MessageType, P2PManager
 
         mock_sock = MagicMock()
         mock_socket_class.return_value = mock_sock
@@ -757,7 +751,7 @@ class TestP2PManager:
     @patch("socket.socket")
     async def test_request_introduction(self, mock_socket_class):
         """Test request_introduction sends INTRODUCE_ME."""
-        from m17.net.p2p import P2PManager, MessageType
+        from m17.net.p2p import MessageType, P2PManager
 
         mock_sock = MagicMock()
         mock_socket_class.return_value = mock_sock
@@ -840,7 +834,7 @@ class TestP2PManager:
     @patch("socket.socket")
     async def test_handle_json_is_at(self, mock_socket_class):
         """Test handling IS_AT message."""
-        from m17.net.p2p import P2PManager, MessageType
+        from m17.net.p2p import MessageType, P2PManager
 
         mock_sock = MagicMock()
         mock_socket_class.return_value = mock_sock
@@ -872,7 +866,7 @@ class TestP2PManager:
     @patch("socket.socket")
     async def test_handle_json_hi(self, mock_socket_class):
         """Test handling HI message establishes connection."""
-        from m17.net.p2p import P2PManager, MessageType
+        from m17.net.p2p import MessageType, P2PManager
 
         mock_sock = MagicMock()
         mock_socket_class.return_value = mock_sock
@@ -946,7 +940,7 @@ class TestDHTConfig:
 
     def test_default_port(self):
         """Test default port."""
-        from m17.net.dht import DHTConfig, DEFAULT_DHT_PORT
+        from m17.net.dht import DEFAULT_DHT_PORT, DHTConfig
 
         config = DHTConfig(bootstrap_nodes=[("dht.example.com", 17001)])
 
@@ -969,7 +963,7 @@ class TestM17DHTNode:
         if not HAS_KADEMLIA:
             pytest.skip("kademlia not installed")
 
-        from m17.net.dht import M17DHTNode, DHTConfig
+        from m17.net.dht import DHTConfig, M17DHTNode
 
         config = DHTConfig(bootstrap_nodes=[("dht.example.com", 17001)])
         node = M17DHTNode(
@@ -989,7 +983,7 @@ class TestM17DHTNode:
         if not HAS_KADEMLIA:
             pytest.skip("kademlia not installed")
 
-        from m17.net.dht import M17DHTNode, DHTConfig
+        from m17.net.dht import DHTConfig, M17DHTNode
 
         config = DHTConfig(bootstrap_nodes=[("dht.example.com", 17001)])
 
@@ -1007,7 +1001,7 @@ class TestM17DHTNode:
         if HAS_KADEMLIA:
             pytest.skip("kademlia is installed")
 
-        from m17.net.dht import M17DHTNode, DHTConfig
+        from m17.net.dht import DHTConfig, M17DHTNode
 
         config = DHTConfig(bootstrap_nodes=[("dht.example.com", 17001)])
 
@@ -1059,7 +1053,7 @@ class TestM17NetworkClient:
 
     def test_create(self):
         """Test creating network client."""
-        from m17.net.client import M17NetworkClient, M17ClientConfig
+        from m17.net.client import M17ClientConfig, M17NetworkClient
 
         config = M17ClientConfig(callsign="N0CALL")
         client = M17NetworkClient(config)
@@ -1070,7 +1064,7 @@ class TestM17NetworkClient:
     @pytest.mark.asyncio
     async def test_context_manager(self):
         """Test async context manager."""
-        from m17.net.client import M17NetworkClient, M17ClientConfig
+        from m17.net.client import M17ClientConfig, M17NetworkClient
 
         config = M17ClientConfig(callsign="N0CALL")
 
@@ -1080,7 +1074,7 @@ class TestM17NetworkClient:
     @pytest.mark.asyncio
     async def test_connect_no_host_raises(self):
         """Test connect without host raises error."""
-        from m17.net.client import M17NetworkClient, M17ClientConfig
+        from m17.net.client import M17ClientConfig, M17NetworkClient
 
         config = M17ClientConfig(callsign="N0CALL")
         client = M17NetworkClient(config)
@@ -1092,7 +1086,7 @@ class TestM17NetworkClient:
     @patch("socket.socket")
     async def test_connect_with_host(self, mock_socket_class):
         """Test connect with specified host."""
-        from m17.net.client import M17NetworkClient, M17ClientConfig
+        from m17.net.client import M17ClientConfig, M17NetworkClient
 
         mock_sock = MagicMock()
         mock_socket_class.return_value = mock_sock
@@ -1112,7 +1106,7 @@ class TestM17NetworkClient:
     @patch("socket.socket")
     async def test_connect_with_config_host(self, mock_socket_class):
         """Test connect uses config host."""
-        from m17.net.client import M17NetworkClient, M17ClientConfig
+        from m17.net.client import M17ClientConfig, M17NetworkClient
 
         mock_sock = MagicMock()
         mock_socket_class.return_value = mock_sock
@@ -1132,7 +1126,7 @@ class TestM17NetworkClient:
 
     def test_add_remove_frame_handler(self):
         """Test adding and removing frame handlers."""
-        from m17.net.client import M17NetworkClient, M17ClientConfig
+        from m17.net.client import M17ClientConfig, M17NetworkClient
 
         config = M17ClientConfig(callsign="N0CALL")
         client = M17NetworkClient(config)
@@ -1147,7 +1141,7 @@ class TestM17NetworkClient:
 
     def test_remove_nonexistent_handler(self):
         """Test removing non-existent handler is no-op."""
-        from m17.net.client import M17NetworkClient, M17ClientConfig
+        from m17.net.client import M17ClientConfig, M17NetworkClient
 
         config = M17ClientConfig(callsign="N0CALL")
         client = M17NetworkClient(config)
@@ -1157,7 +1151,7 @@ class TestM17NetworkClient:
 
     def test_stream_returns_context(self):
         """Test stream returns StreamContext."""
-        from m17.net.client import M17NetworkClient, M17ClientConfig, StreamContext
+        from m17.net.client import M17ClientConfig, M17NetworkClient, StreamContext
 
         config = M17ClientConfig(callsign="N0CALL")
         client = M17NetworkClient(config)
@@ -1172,7 +1166,7 @@ class TestStreamContext:
 
     def test_create(self):
         """Test creating stream context."""
-        from m17.net.client import M17NetworkClient, M17ClientConfig, StreamContext
+        from m17.net.client import M17ClientConfig, M17NetworkClient, StreamContext
 
         config = M17ClientConfig(callsign="N0CALL")
         client = M17NetworkClient(config)
@@ -1189,7 +1183,7 @@ class TestStreamContext:
 
     def test_stream_id_property(self):
         """Test stream_id property."""
-        from m17.net.client import M17NetworkClient, M17ClientConfig, StreamContext
+        from m17.net.client import M17ClientConfig, M17NetworkClient, StreamContext
 
         config = M17ClientConfig(callsign="N0CALL")
         client = M17NetworkClient(config)
@@ -1206,7 +1200,7 @@ class TestStreamContext:
 
     def test_frame_number_property(self):
         """Test frame_number property."""
-        from m17.net.client import M17NetworkClient, M17ClientConfig, StreamContext
+        from m17.net.client import M17ClientConfig, M17NetworkClient, StreamContext
 
         config = M17ClientConfig(callsign="N0CALL")
         client = M17NetworkClient(config)
@@ -1222,7 +1216,7 @@ class TestStreamContext:
     @pytest.mark.asyncio
     async def test_context_manager_creates_lsf(self):
         """Test entering context manager creates LSF."""
-        from m17.net.client import M17NetworkClient, M17ClientConfig, StreamContext
+        from m17.net.client import M17ClientConfig, M17NetworkClient, StreamContext
 
         config = M17ClientConfig(callsign="N0CALL")
         client = M17NetworkClient(config)
@@ -1242,7 +1236,7 @@ class TestStreamContext:
     @patch("socket.socket")
     async def test_send_pads_short_payload(self, mock_socket_class):
         """Test send pads short payloads to 16 bytes."""
-        from m17.net.client import M17NetworkClient, M17ClientConfig, StreamContext
+        from m17.net.client import M17ClientConfig, M17NetworkClient, StreamContext
 
         mock_sock = MagicMock()
         mock_socket_class.return_value = mock_sock
@@ -1274,7 +1268,7 @@ class TestStreamContext:
     @patch("socket.socket")
     async def test_send_truncates_long_payload(self, mock_socket_class):
         """Test send truncates long payloads to 16 bytes."""
-        from m17.net.client import M17NetworkClient, M17ClientConfig, StreamContext
+        from m17.net.client import M17ClientConfig, M17NetworkClient, StreamContext
 
         mock_sock = MagicMock()
         mock_socket_class.return_value = mock_sock
@@ -1306,7 +1300,7 @@ class TestStreamContext:
     @patch("socket.socket")
     async def test_frame_number_increments(self, mock_socket_class):
         """Test frame number increments after send."""
-        from m17.net.client import M17NetworkClient, M17ClientConfig, StreamContext
+        from m17.net.client import M17ClientConfig, M17NetworkClient, StreamContext
 
         mock_sock = MagicMock()
         mock_socket_class.return_value = mock_sock
@@ -1345,17 +1339,6 @@ class TestNetModuleImports:
 
     def test_import_from_net(self):
         """Test importing from m17.net."""
-        from m17.net import (
-            ReflectorConnection,
-            ReflectorProtocol,
-            M17ReflectorClient,
-            M17DHTNode,
-            DHTConfig,
-            P2PConnection,
-            P2PManager,
-            M17NetworkClient,
-            M17ClientConfig,
-        )
 
     def test_all_exports(self):
         """Test __all__ exports."""
@@ -1382,18 +1365,18 @@ class TestLegacyAliases:
 
     def test_reflector_alias(self):
         """Test n7tae_reflector_conn alias."""
-        from m17.net.reflector import n7tae_reflector_conn, ReflectorConnection
+        from m17.net.reflector import ReflectorConnection, n7tae_reflector_conn
 
         assert n7tae_reflector_conn is ReflectorConnection
 
     def test_p2p_alias(self):
         """Test m17_networking_direct alias."""
-        from m17.net.p2p import m17_networking_direct, P2PManager
+        from m17.net.p2p import P2PManager, m17_networking_direct
 
         assert m17_networking_direct is P2PManager
 
     def test_dht_alias(self):
         """Test m17_networking_dht alias."""
-        from m17.net.dht import m17_networking_dht, M17DHTNode
+        from m17.net.dht import M17DHTNode, m17_networking_dht
 
         assert m17_networking_dht is M17DHTNode

@@ -1,5 +1,4 @@
-"""
-Sanity Check Script (Legacy Module)
+"""Sanity Check Script (Legacy Module)
 
 This script checks if the required optional modules are installed and working properly.
 
@@ -19,9 +18,9 @@ warnings.warn(
 
 if __name__ == "__main__":
     try:
-        import soundcard as sc  # noqa: F401
-        import pycodec2  # noqa: F401
         import numpy  # noqa: F401
+        import pycodec2  # noqa: F401
+        import soundcard as sc  # noqa: F401
 
         print("Successfully imported pycodec2 and soundcard modules, everything should work.")
         sys.exit(0)

@@ -1,34 +1,31 @@
-"""
-Tests for M17 v3.0.0 specification features.
+"""Tests for M17 v3.0.0 specification features.
 """
 
 import pytest
 
+from m17.core.address import Address
 from m17.core.types import (
-    M17Version,
-    M17Payload,
+    M17DataType,
     M17Encryption,
     M17Meta,
-    TypeFieldV3,
-    build_type_field_v3,
-    parse_type_field_v3,
-    detect_type_field_version,
-    # Legacy v2.0.3
-    build_type_field,
+    M17Payload,
     M17Type,
-    M17DataType,
+    M17Version,
+    build_type_field,
+    build_type_field_v3,
+    detect_type_field_version,
+    parse_type_field_v3,
 )
 from m17.frames.lsf import (
     LinkSetupFrame,
-    MetaText,
     MetaAesIV,
+    MetaText,
 )
 from m17.frames.packet import (
+    PacketFrame,
     PacketProtocol,
     TLEPacket,
-    PacketFrame,
 )
-from m17.core.address import Address
 
 
 class TestTypeFieldV3:
@@ -144,8 +141,12 @@ class TestVersionDetection:
 
     def test_detect_v3_all_payloads(self):
         """Test v3 detection for all payload types."""
-        for payload in [M17Payload.DATA_ONLY, M17Payload.VOICE_3200,
-                        M17Payload.VOICE_1600_DATA, M17Payload.PACKET]:
+        for payload in [
+            M17Payload.DATA_ONLY,
+            M17Payload.VOICE_3200,
+            M17Payload.VOICE_1600_DATA,
+            M17Payload.PACKET,
+        ]:
             tf = build_type_field_v3(payload=payload)
             assert detect_type_field_version(tf) == M17Version.V3
 

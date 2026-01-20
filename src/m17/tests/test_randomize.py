@@ -1,5 +1,4 @@
-"""
-Tests for M17 Randomizer
+"""Tests for M17 Randomizer
 
 Tests the XOR randomization for DC balance and synchronization.
 """
@@ -7,13 +6,13 @@ Tests the XOR randomization for DC balance and synchronization.
 import pytest
 
 from m17.codec.randomize import (
-    randomize,
+    _RAND_BITS,
+    RAND_SEQ,
     derandomize,
-    randomize_soft,
     derandomize_soft,
     get_random_bit,
-    RAND_SEQ,
-    _RAND_BITS,
+    randomize,
+    randomize_soft,
 )
 
 

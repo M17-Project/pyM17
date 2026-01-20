@@ -1,5 +1,4 @@
-"""
-M17 CRC-16 Implementation
+"""M17 CRC-16 Implementation
 
 CRC-16 with polynomial 0x5935, initial value 0xFFFF.
 Port from libm17/payload/crc.c
@@ -19,18 +18,20 @@ M17_CRC_POLY: int = 0x5935
 
 
 def crc_m17(data: bytes | bytearray) -> int:
-    """
-    Calculate M17 CRC-16.
+    """Calculate M17 CRC-16.
 
     Uses polynomial 0x5935 with initial value 0xFFFF.
 
     Args:
+    ----
         data: Input byte array to calculate CRC over.
 
     Returns:
+    -------
         16-bit CRC value.
 
     Examples:
+    --------
         >>> crc_m17(b"")
         65535
         >>> hex(crc_m17(b""))
@@ -53,16 +54,18 @@ def crc_m17(data: bytes | bytearray) -> int:
 
 
 def crc_m17_bytes(data: bytes | bytearray) -> bytes:
-    """
-    Calculate M17 CRC-16 and return as big-endian bytes.
+    """Calculate M17 CRC-16 and return as big-endian bytes.
 
     Args:
+    ----
         data: Input byte array to calculate CRC over.
 
     Returns:
+    -------
         2-byte CRC value in big-endian format.
 
     Examples:
+    --------
         >>> crc_m17_bytes(b"123456789").hex()
         '772b'
     """
@@ -70,19 +73,21 @@ def crc_m17_bytes(data: bytes | bytearray) -> bytes:
 
 
 def verify_crc(data: bytes | bytearray) -> bool:
-    """
-    Verify that data with appended CRC has valid checksum.
+    """Verify that data with appended CRC has valid checksum.
 
     The data should include the 2-byte CRC at the end.
     Valid data will produce CRC of 0x0000.
 
     Args:
+    ----
         data: Data with 2-byte CRC appended.
 
     Returns:
+    -------
         True if CRC is valid, False otherwise.
 
     Examples:
+    --------
         >>> data = b"123456789" + bytes([0x77, 0x2B])
         >>> verify_crc(data)
         True

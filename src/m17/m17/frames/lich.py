@@ -1,5 +1,4 @@
-"""
-M17 LICH (Link Information Channel) Frame Handling
+"""M17 LICH (Link Information Channel) Frame Handling
 
 The LICH transmits the Link Setup Frame incrementally during a stream.
 Each stream frame contains a 6-byte LICH chunk, which is 1/5 of the
@@ -15,7 +14,7 @@ from __future__ import annotations
 
 import struct
 from dataclasses import dataclass, field
-from typing import List, Optional
+from typing import Optional
 
 from m17.core.address import Address
 from m17.frames.lsf import LinkSetupFrame
@@ -25,12 +24,12 @@ __all__ = ["LICHFrame", "LICHChunk", "LICHCollector"]
 
 @dataclass
 class LICHChunk:
-    """
-    A single LICH chunk (6 bytes / 48 bits).
+    """A single LICH chunk (6 bytes / 48 bits).
 
     Each chunk represents 1/5 of the Link Setup Frame data.
 
-    Attributes:
+    Attributes
+    ----------
         data: 6-byte chunk data.
         index: Chunk index (0-4).
     """
@@ -60,15 +59,15 @@ class LICHChunk:
 
 @dataclass
 class LICHFrame:
-    """
-    LICH Frame (Link Information Channel).
+    """LICH Frame (Link Information Channel).
 
     This is the legacy name for what is essentially the Link Setup Frame
     when used in the context of stream frame LICH chunks.
 
     Maintained for backward compatibility with existing code.
 
-    Attributes:
+    Attributes
+    ----------
         dst: Destination address.
         src: Source address.
         stream_type: TYPE field value.
@@ -94,21 +93,20 @@ class LICHFrame:
         # Ensure nonce is exactly 14 bytes
         if len(self.nonce) != 14:
             if len(self.nonce) < 14:
-                object.__setattr__(
-                    self, "nonce", self.nonce + bytes(14 - len(self.nonce))
-                )
+                object.__setattr__(self, "nonce", self.nonce + bytes(14 - len(self.nonce)))
             else:
                 object.__setattr__(self, "nonce", self.nonce[:14])
 
     @classmethod
     def from_lsf(cls, lsf: LinkSetupFrame) -> LICHFrame:
-        """
-        Create LICHFrame from LinkSetupFrame.
+        """Create LICHFrame from LinkSetupFrame.
 
         Args:
+        ----
             lsf: Link Setup Frame.
 
         Returns:
+        -------
             LICHFrame with same data.
         """
         return cls(
@@ -119,10 +117,10 @@ class LICHFrame:
         )
 
     def to_lsf(self) -> LinkSetupFrame:
-        """
-        Convert to LinkSetupFrame.
+        """Convert to LinkSetupFrame.
 
-        Returns:
+        Returns
+        -------
             LinkSetupFrame with same data.
         """
         return LinkSetupFrame(
@@ -133,10 +131,10 @@ class LICHFrame:
         )
 
     def to_bytes(self) -> bytes:
-        """
-        Serialize LICH to bytes.
+        """Serialize LICH to bytes.
 
-        Returns:
+        Returns
+        -------
             28-byte LICH data.
         """
         return self._STRUCT.pack(
@@ -156,13 +154,14 @@ class LICHFrame:
 
     @classmethod
     def from_bytes(cls, data: bytes) -> LICHFrame:
-        """
-        Parse LICH from bytes.
+        """Parse LICH from bytes.
 
         Args:
+        ----
             data: 28 bytes of LICH data.
 
         Returns:
+        -------
             Parsed LICHFrame.
         """
         if len(data) != 28:
@@ -182,16 +181,17 @@ class LICHFrame:
         """Parse LICH (legacy method)."""
         return cls.from_bytes(data)
 
-    def chunks(self, chunk_size: int = 6) -> List[bytes]:
-        """
-        Split LICH into chunks for stream transmission.
+    def chunks(self, chunk_size: int = 6) -> list[bytes]:
+        """Split LICH into chunks for stream transmission.
 
         The 28-byte LICH is padded to 30 bytes and split into 5 chunks.
 
         Args:
+        ----
             chunk_size: Size of each chunk (default 6).
 
         Returns:
+        -------
             List of 5 byte chunks.
         """
         data = self.to_bytes()
@@ -200,13 +200,14 @@ class LICHFrame:
         return [data[i : i + chunk_size] for i in range(0, 30, chunk_size)]
 
     def get_chunk(self, frame_number: int) -> bytes:
-        """
-        Get the LICH chunk for a specific frame number.
+        """Get the LICH chunk for a specific frame number.
 
         Args:
+        ----
             frame_number: Frame number to determine chunk index.
 
         Returns:
+        -------
             6-byte LICH chunk for this frame.
         """
         chunks = self.chunks()
@@ -235,13 +236,14 @@ class LICHFrame:
 
     @staticmethod
     def dict_from_bytes(data: bytes) -> dict:
-        """
-        Parse LICH to dictionary (legacy method).
+        """Parse LICH to dictionary (legacy method).
 
         Args:
+        ----
             data: 28 bytes of LICH data.
 
         Returns:
+        -------
             Dictionary with LICH fields.
         """
         lich = LICHFrame.from_bytes(data)
@@ -254,8 +256,7 @@ class LICHFrame:
 
 
 class LICHCollector:
-    """
-    Collects LICH chunks to reconstruct the full Link Setup Frame.
+    """Collects LICH chunks to reconstruct the full Link Setup Frame.
 
     As stream frames arrive with their 6-byte LICH chunks, this class
     tracks which chunks have been received and reconstructs the LSF
@@ -264,18 +265,19 @@ class LICHCollector:
 
     def __init__(self) -> None:
         """Initialize collector."""
-        self._chunks: List[Optional[bytes]] = [None] * 5
+        self._chunks: list[Optional[bytes]] = [None] * 5
         self._complete: bool = False
 
     def add_chunk(self, chunk: bytes, frame_number: int) -> bool:
-        """
-        Add a LICH chunk.
+        """Add a LICH chunk.
 
         Args:
+        ----
             chunk: 6-byte LICH chunk.
             frame_number: Frame number to determine chunk index.
 
         Returns:
+        -------
             True if all chunks have been received.
         """
         if len(chunk) != 6:
@@ -294,10 +296,10 @@ class LICHCollector:
         return self._complete
 
     def get_lsf(self) -> Optional[LinkSetupFrame]:
-        """
-        Get the reconstructed Link Setup Frame.
+        """Get the reconstructed Link Setup Frame.
 
-        Returns:
+        Returns
+        -------
             LinkSetupFrame if complete, None otherwise.
         """
         if not self._complete:
@@ -308,10 +310,10 @@ class LICHCollector:
         return LinkSetupFrame.from_bytes(data)
 
     def get_lich(self) -> Optional[LICHFrame]:
-        """
-        Get the reconstructed LICH (legacy method).
+        """Get the reconstructed LICH (legacy method).
 
-        Returns:
+        Returns
+        -------
             LICHFrame if complete, None otherwise.
         """
         if not self._complete:
@@ -331,16 +333,17 @@ class LICHCollector:
         return sum(1 for c in self._chunks if c is not None)
 
     @staticmethod
-    def recover_from_frames(frames: List[bytes]) -> Optional[bytes]:
-        """
-        Recover LICH bytes from a list of stream frames.
+    def recover_from_frames(frames: list[bytes]) -> Optional[bytes]:
+        """Recover LICH bytes from a list of stream frames.
 
         Legacy static method for backward compatibility.
 
         Args:
+        ----
             frames: List of stream frame bytes.
 
         Returns:
+        -------
             28-byte LICH data if recoverable, None otherwise.
         """
         collector = LICHCollector()

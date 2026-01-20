@@ -1,5 +1,4 @@
-"""
-M17 Audio Processing Blocks
+"""M17 Audio Processing Blocks
 
 Provides building blocks for audio processing pipelines.
 These can be connected together to create complete audio paths
@@ -15,19 +14,17 @@ import logging
 import queue
 import random
 import threading
-import time
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Any, Callable, Generic, Optional, TypeVar
+from typing import Any, Generic, Optional, TypeVar
 
 import numpy as np
 
-from m17.core.address import Address
 from m17.frames.ip import IPFrame
-from m17.frames.stream import M17Payload
 
 try:
     import soundcard as sc
+
     HAS_SOUNDCARD = True
 except ImportError:
     HAS_SOUNDCARD = False
@@ -35,12 +32,13 @@ except ImportError:
 
 try:
     import samplerate
+
     HAS_SAMPLERATE = True
 except ImportError:
     HAS_SAMPLERATE = False
     samplerate = None
 
-from m17.audio.codec2 import Codec2Wrapper, Codec2Mode, HAS_CODEC2
+from m17.audio.codec2 import HAS_CODEC2, Codec2Mode, Codec2Wrapper
 
 __all__ = [
     "AudioBlock",
@@ -61,8 +59,7 @@ U = TypeVar("U")
 
 
 class AudioBlock(ABC, Generic[T, U]):
-    """
-    Base class for audio processing blocks.
+    """Base class for audio processing blocks.
 
     Blocks can be connected in a chain, with each block
     processing data and passing it to the next.
@@ -118,13 +115,14 @@ class AudioBlock(ABC, Generic[T, U]):
 
     @abstractmethod
     def process(self, item: T) -> Optional[U]:
-        """
-        Process a single item.
+        """Process a single item.
 
         Args:
+        ----
             item: Input item.
 
         Returns:
+        -------
             Processed output, or None to skip.
         """
         pass
@@ -132,8 +130,7 @@ class AudioBlock(ABC, Generic[T, U]):
 
 @dataclass
 class MicrophoneSource:
-    """
-    Audio source from system microphone.
+    """Audio source from system microphone.
 
     Captures audio at 8kHz mono and emits int16 numpy arrays.
     """
@@ -168,7 +165,9 @@ class MicrophoneSource:
     def _capture_loop(self) -> None:
         """Audio capture loop."""
         mic = sc.default_microphone()
-        with mic.recorder(samplerate=8000, channels=1, blocksize=self.samples_per_frame) as recorder:
+        with mic.recorder(
+            samplerate=8000, channels=1, blocksize=self.samples_per_frame
+        ) as recorder:
             while self._running:
                 audio = recorder.record(numframes=self.samples_per_frame)
                 # Convert float [-1, 1] to int16
@@ -179,8 +178,7 @@ class MicrophoneSource:
 
 @dataclass
 class SpeakerSink:
-    """
-    Audio sink to system speaker.
+    """Audio sink to system speaker.
 
     Plays int16 numpy arrays at 8kHz mono.
     """
@@ -227,8 +225,7 @@ class SpeakerSink:
 
 
 class Codec2Encoder(AudioBlock[np.ndarray, bytes]):
-    """
-    Encode audio to Codec2 bits.
+    """Encode audio to Codec2 bits.
 
     Input: int16 numpy arrays (160 samples for 3200bps mode)
     Output: bytes (8 bytes per frame for 3200bps mode)
@@ -247,8 +244,7 @@ class Codec2Encoder(AudioBlock[np.ndarray, bytes]):
 
 
 class Codec2Decoder(AudioBlock[bytes, np.ndarray]):
-    """
-    Decode Codec2 bits to audio.
+    """Decode Codec2 bits to audio.
 
     Input: bytes (8 bytes per frame for 3200bps mode)
     Output: int16 numpy arrays (160 samples for 3200bps mode)
@@ -268,8 +264,7 @@ class Codec2Decoder(AudioBlock[bytes, np.ndarray]):
 
 @dataclass
 class M17Framer:
-    """
-    Frame Codec2 data into M17 IP frames.
+    """Frame Codec2 data into M17 IP frames.
 
     Combines 2 Codec2 frames (16 bytes) into one M17 payload.
     """
@@ -342,8 +337,7 @@ class M17Framer:
 
 
 class M17Parser(AudioBlock[IPFrame, bytes]):
-    """
-    Parse M17 IP frames and extract Codec2 payload.
+    """Parse M17 IP frames and extract Codec2 payload.
 
     Input: IPFrame
     Output: bytes (16-byte payload, typically 2 Codec2 frames)
@@ -355,8 +349,7 @@ class M17Parser(AudioBlock[IPFrame, bytes]):
 
 
 class Tee(AudioBlock[T, T]):
-    """
-    Pass-through block that prints items.
+    """Pass-through block that prints items.
 
     Useful for debugging pipelines.
     """
@@ -376,8 +369,7 @@ class Tee(AudioBlock[T, T]):
 
 
 class Null(AudioBlock[T, None]):
-    """
-    Sink that discards all input.
+    """Sink that discards all input.
 
     Useful for terminating pipelines.
     """

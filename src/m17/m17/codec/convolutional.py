@@ -1,5 +1,4 @@
-"""
-M17 Convolutional Encoder
+"""M17 Convolutional Encoder
 
 K=5 constraint length, rate 1/2 convolutional encoder.
 Generator polynomials: G1=0x19 (25), G2=0x17 (23)
@@ -9,7 +8,7 @@ Port from libm17/encode/convol.c
 
 from __future__ import annotations
 
-from typing import List, Optional
+from typing import Optional
 
 __all__ = [
     "conv_encode",
@@ -28,15 +27,16 @@ POLY_G1: int = 0x19  # x^4 + x^3 + 1
 POLY_G2: int = 0x17  # x^4 + x^2 + x + 1
 
 
-def _unpack_bits(data: bytes, num_bits: Optional[int] = None) -> List[int]:
-    """
-    Unpack bytes to a list of bits (MSB first).
+def _unpack_bits(data: bytes, num_bits: Optional[int] = None) -> list[int]:
+    """Unpack bytes to a list of bits (MSB first).
 
     Args:
+    ----
         data: Input bytes.
         num_bits: Number of bits to unpack (default: all).
 
     Returns:
+    -------
         List of bit values (0 or 1).
     """
     if num_bits is None:
@@ -54,18 +54,19 @@ def _unpack_bits(data: bytes, num_bits: Optional[int] = None) -> List[int]:
     return bits
 
 
-def conv_encode(data: List[int], flush: bool = True) -> List[int]:
-    """
-    Convolutional encode a bit stream.
+def conv_encode(data: list[int], flush: bool = True) -> list[int]:
+    """Convolutional encode a bit stream.
 
     Uses K=5 constraint length, rate 1/2 encoder.
     Output is 2 bits per input bit.
 
     Args:
+    ----
         data: List of input bits (0 or 1).
         flush: If True, append 4 zero bits to flush encoder state.
 
     Returns:
+    -------
         List of encoded bits (twice the length of input + 8 if flushed).
     """
     # Prepend 4 zeros for initial state
@@ -91,18 +92,19 @@ def conv_encode(data: List[int], flush: bool = True) -> List[int]:
     return output
 
 
-def conv_encode_lsf(lsf_data: bytes) -> List[int]:
-    """
-    Convolutional encode an LSF (240 bits -> 488 bits, pre-puncture).
+def conv_encode_lsf(lsf_data: bytes) -> list[int]:
+    """Convolutional encode an LSF (240 bits -> 488 bits, pre-puncture).
 
     The LSF is 30 bytes (240 bits) with CRC.
     After encoding with K=5 rate 1/2 + flush: (240+4)*2 = 488 bits.
     After P1 puncturing: 368 bits.
 
     Args:
+    ----
         lsf_data: 30-byte LSF with CRC.
 
     Returns:
+    -------
         List of 488 encoded bits (before puncturing).
     """
     if len(lsf_data) != 30:
@@ -112,19 +114,20 @@ def conv_encode_lsf(lsf_data: bytes) -> List[int]:
     return conv_encode(bits, flush=True)
 
 
-def conv_encode_stream(frame_number: int, payload: bytes) -> List[int]:
-    """
-    Convolutional encode a stream frame (144 bits -> 296 bits, pre-puncture).
+def conv_encode_stream(frame_number: int, payload: bytes) -> list[int]:
+    """Convolutional encode a stream frame (144 bits -> 296 bits, pre-puncture).
 
     Stream frame: 16-bit frame number + 128-bit payload = 144 bits.
     After encoding with K=5 rate 1/2 + flush: (144+4)*2 = 296 bits.
     After P2 puncturing: 272 bits.
 
     Args:
+    ----
         frame_number: 16-bit frame number.
         payload: 16-byte payload.
 
     Returns:
+    -------
         List of 296 encoded bits (before puncturing).
     """
     if len(payload) != 16:
@@ -142,9 +145,8 @@ def conv_encode_stream(frame_number: int, payload: bytes) -> List[int]:
     return conv_encode(bits, flush=True)
 
 
-def conv_encode_packet(packet_chunk: bytes) -> List[int]:
-    """
-    Convolutional encode a packet frame (206 bits -> 420 bits, pre-puncture).
+def conv_encode_packet(packet_chunk: bytes) -> list[int]:
+    """Convolutional encode a packet frame (206 bits -> 420 bits, pre-puncture).
 
     Packet chunk: 25 bytes data + 1 byte control = 26 bytes.
     Only 206 bits are significant (200 data + 1 EOP + 5 counter).
@@ -152,9 +154,11 @@ def conv_encode_packet(packet_chunk: bytes) -> List[int]:
     After P3 puncturing: 368 bits.
 
     Args:
+    ----
         packet_chunk: 26-byte packet chunk.
 
     Returns:
+    -------
         List of 420 encoded bits (before puncturing).
     """
     if len(packet_chunk) != 26:
@@ -170,18 +174,19 @@ def conv_encode_packet(packet_chunk: bytes) -> List[int]:
     return conv_encode(bits, flush=True)
 
 
-def conv_encode_bert(bert_data: bytes) -> List[int]:
-    """
-    Convolutional encode a BERT frame (197 bits -> 402 bits, pre-puncture).
+def conv_encode_bert(bert_data: bytes) -> list[int]:
+    """Convolutional encode a BERT frame (197 bits -> 402 bits, pre-puncture).
 
     BERT: 25 bytes = 200 bits, but only 197 are used.
     After encoding with K=5 rate 1/2 + flush: (197+4)*2 = 402 bits.
     After P2 puncturing: 368 bits.
 
     Args:
+    ----
         bert_data: 25-byte BERT data.
 
     Returns:
+    -------
         List of 402 encoded bits (before puncturing).
     """
     if len(bert_data) != 25:
@@ -197,14 +202,15 @@ def conv_encode_bert(bert_data: bytes) -> List[int]:
     return conv_encode(bits, flush=True)
 
 
-def conv_encode_bytes(data: bytes) -> List[int]:
-    """
-    Convolutional encode arbitrary bytes.
+def conv_encode_bytes(data: bytes) -> list[int]:
+    """Convolutional encode arbitrary bytes.
 
     Args:
+    ----
         data: Input bytes.
 
     Returns:
+    -------
         List of encoded bits.
     """
     bits = _unpack_bits(data)

@@ -253,6 +253,32 @@ pytest
 pytest --cov=m17 --cov-report=html
 ```
 
+## Development
+
+### Code Quality
+
+Pre-commit hooks are configured for code quality checks:
+
+```bash
+# Install pre-commit hooks
+pre-commit install
+
+# Run all hooks manually
+pre-commit run --all-files
+```
+
+Configured hooks:
+- **ruff** - Linting and formatting
+- **mypy** - Type checking (strict mode)
+- **poetry-check** - Dependency validation
+
+### CI/CD
+
+GitHub Actions runs on every push/PR:
+- pytest with coverage reporting to Codecov
+- mypy type checking
+- ruff linting and format checking
+
 ## Specification Compliance
 
 This library implements the [M17 Protocol Specification](https://spec.m17project.org/):

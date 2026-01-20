@@ -1,5 +1,4 @@
-"""
-M17 IP Frame Definitions
+"""M17 IP Frame Definitions
 
 IP frames are used for M17-over-IP networking (reflectors, etc.).
 Each IP frame contains:
@@ -23,8 +22,8 @@ from dataclasses import dataclass, field
 from typing import Optional, Union
 
 from m17.core.address import Address
-from m17.core.crc import crc_m17
 from m17.core.constants import M17_MAGIC_NUMBER
+from m17.core.crc import crc_m17
 from m17.frames.lsf import LinkSetupFrame
 from m17.frames.stream import M17Payload
 
@@ -33,12 +32,12 @@ __all__ = ["IPFrame"]
 
 @dataclass
 class IPFrame:
-    """
-    M17 IP Frame for network transmission.
+    """M17 IP Frame for network transmission.
 
     This is the format used for M17-over-IP protocols (reflectors, etc.).
 
-    Attributes:
+    Attributes
+    ----------
         magic_number: 4-byte magic "M17 ".
         stream_id: 16-bit stream identifier.
         lsf: Full Link Setup Frame data.
@@ -47,10 +46,12 @@ class IPFrame:
 
     magic_number: bytes = field(default_factory=lambda: M17_MAGIC_NUMBER)
     stream_id: int = 0
-    lsf: LinkSetupFrame = field(default_factory=lambda: LinkSetupFrame(
-        dst=Address(callsign="@ALL"),
-        src=Address(callsign="N0CALL"),
-    ))
+    lsf: LinkSetupFrame = field(
+        default_factory=lambda: LinkSetupFrame(
+            dst=Address(callsign="@ALL"),
+            src=Address(callsign="N0CALL"),
+        )
+    )
     payload: M17Payload = field(default_factory=M17Payload)
 
     # Struct for packing/unpacking
@@ -106,8 +107,7 @@ class IPFrame:
         return self.lsf.meta
 
     def calculate_crc(self) -> int:
-        """
-        Calculate CRC for this IP frame.
+        """Calculate CRC for this IP frame.
 
         The CRC is calculated over the LICH, frame number, and payload.
         """
@@ -122,10 +122,10 @@ class IPFrame:
         return crc_m17(data)
 
     def to_bytes(self) -> bytes:
-        """
-        Serialize IP frame to bytes.
+        """Serialize IP frame to bytes.
 
-        Returns:
+        Returns
+        -------
             54-byte serialized IP frame.
         """
         crc = self.calculate_crc()
@@ -151,16 +151,18 @@ class IPFrame:
 
     @classmethod
     def from_bytes(cls, data: bytes) -> IPFrame:
-        """
-        Parse IP frame from bytes.
+        """Parse IP frame from bytes.
 
         Args:
+        ----
             data: 54 bytes of IP frame data.
 
         Returns:
+        -------
             Parsed IPFrame.
 
         Raises:
+        ------
             ValueError: If data is wrong size or not an M17 frame.
         """
         if len(data) != 54:
@@ -201,13 +203,14 @@ class IPFrame:
 
     @staticmethod
     def is_m17(data: bytes) -> bool:
-        """
-        Check if bytes are an M17 IP frame.
+        """Check if bytes are an M17 IP frame.
 
         Args:
+        ----
             data: Bytes to check.
 
         Returns:
+        -------
             True if starts with M17 magic number.
         """
         return len(data) >= 4 and data[:4] == M17_MAGIC_NUMBER
@@ -223,10 +226,10 @@ class IPFrame:
         frame_number: int = 0,
         payload: bytes = b"",
     ) -> IPFrame:
-        """
-        Create a new IP frame with the given parameters.
+        """Create a new IP frame with the given parameters.
 
         Args:
+        ----
             dst: Destination callsign or Address.
             src: Source callsign or Address.
             stream_id: Stream ID (random if not specified).
@@ -236,6 +239,7 @@ class IPFrame:
             payload: Payload data.
 
         Returns:
+        -------
             New IPFrame.
         """
         if isinstance(dst, str):
@@ -303,13 +307,14 @@ class IPFrame:
 
     @staticmethod
     def dict_from_bytes(data: bytes) -> dict:
-        """
-        Parse IP frame to dictionary (legacy method).
+        """Parse IP frame to dictionary (legacy method).
 
         Args:
+        ----
             data: 54 bytes of IP frame data.
 
         Returns:
+        -------
             Dictionary with frame fields.
         """
         frame = IPFrame.from_bytes(data)

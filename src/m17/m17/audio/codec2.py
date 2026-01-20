@@ -1,5 +1,4 @@
-"""
-M17 Codec2 Wrapper
+"""M17 Codec2 Wrapper
 
 Provides a type-safe wrapper around pycodec2 for M17 voice encoding.
 
@@ -21,6 +20,7 @@ import numpy as np
 
 try:
     import pycodec2
+
     HAS_CODEC2 = True
 except ImportError:
     HAS_CODEC2 = False
@@ -43,7 +43,7 @@ class Codec2Mode(IntEnum):
     MODE_1300 = 4  # 1300 bps
     MODE_1200 = 5  # 1200 bps
     MODE_700C = 6  # 700C bps
-    MODE_450 = 7   # 450 bps
+    MODE_450 = 7  # 450 bps
     MODE_450PWB = 8  # 450 bps wideband
 
 
@@ -76,12 +76,12 @@ MODE_SAMPLES_PER_FRAME = {
 
 @dataclass
 class Codec2Wrapper:
-    """
-    Wrapper for Codec2 voice codec.
+    """Wrapper for Codec2 voice codec.
 
     Provides encoding and decoding of voice audio using Codec2.
 
     Example:
+    -------
         codec = Codec2Wrapper(Codec2Mode.MODE_3200)
 
         # Encode audio to bits
@@ -98,9 +98,7 @@ class Codec2Wrapper:
     def __post_init__(self) -> None:
         """Initialize Codec2 instance."""
         if not HAS_CODEC2:
-            raise ImportError(
-                "pycodec2 not installed. Install with: pip install pycodec2"
-            )
+            raise ImportError("pycodec2 not installed. Install with: pip install pycodec2")
         self._codec = pycodec2.Codec2(int(self.mode))
 
     @property
@@ -129,23 +127,23 @@ class Codec2Wrapper:
         return self.samples_per_frame / self.sample_rate * 1000
 
     def encode(self, audio: np.ndarray) -> bytes:
-        """
-        Encode audio samples to Codec2 bits.
+        """Encode audio samples to Codec2 bits.
 
         Args:
+        ----
             audio: Audio samples as int16 array.
                    Must be exactly samples_per_frame samples.
 
         Returns:
+        -------
             Encoded bits as bytes.
 
         Raises:
+        ------
             ValueError: If audio length is wrong.
         """
         if len(audio) != self.samples_per_frame:
-            raise ValueError(
-                f"Audio must be {self.samples_per_frame} samples, got {len(audio)}"
-            )
+            raise ValueError(f"Audio must be {self.samples_per_frame} samples, got {len(audio)}")
 
         # Ensure correct dtype
         if audio.dtype != np.int16:
@@ -154,59 +152,60 @@ class Codec2Wrapper:
         return self._codec.encode(audio)
 
     def decode(self, bits: bytes) -> np.ndarray:
-        """
-        Decode Codec2 bits to audio samples.
+        """Decode Codec2 bits to audio samples.
 
         Args:
+        ----
             bits: Encoded bits as bytes.
                   Must be exactly bytes_per_frame bytes.
 
         Returns:
+        -------
             Decoded audio samples as int16 array.
 
         Raises:
+        ------
             ValueError: If bits length is wrong.
         """
         if len(bits) != self.bytes_per_frame:
-            raise ValueError(
-                f"Bits must be {self.bytes_per_frame} bytes, got {len(bits)}"
-            )
+            raise ValueError(f"Bits must be {self.bytes_per_frame} bytes, got {len(bits)}")
 
         return self._codec.decode(bits)
 
     def encode_stream(self, audio: np.ndarray) -> list[bytes]:
-        """
-        Encode a longer audio stream to multiple frames.
+        """Encode a longer audio stream to multiple frames.
 
         Args:
+        ----
             audio: Audio samples (any length).
 
         Returns:
+        -------
             List of encoded frame bytes.
         """
         frames = []
         samples_per_frame = self.samples_per_frame
 
         for i in range(0, len(audio), samples_per_frame):
-            chunk = audio[i:i + samples_per_frame]
+            chunk = audio[i : i + samples_per_frame]
             if len(chunk) < samples_per_frame:
                 # Pad last chunk with zeros
-                chunk = np.concatenate([
-                    chunk,
-                    np.zeros(samples_per_frame - len(chunk), dtype=np.int16)
-                ])
+                chunk = np.concatenate(
+                    [chunk, np.zeros(samples_per_frame - len(chunk), dtype=np.int16)]
+                )
             frames.append(self.encode(chunk))
 
         return frames
 
     def decode_stream(self, frames: list[bytes]) -> np.ndarray:
-        """
-        Decode multiple frames to audio stream.
+        """Decode multiple frames to audio stream.
 
         Args:
+        ----
             frames: List of encoded frame bytes.
 
         Returns:
+        -------
             Decoded audio samples.
         """
         audio_chunks = [self.decode(frame) for frame in frames]
@@ -214,13 +213,14 @@ class Codec2Wrapper:
 
 
 def create_codec2(mode: Union[Codec2Mode, int] = Codec2Mode.MODE_3200) -> Codec2Wrapper:
-    """
-    Create a Codec2 wrapper.
+    """Create a Codec2 wrapper.
 
     Args:
+    ----
         mode: Codec2 mode (default: 3200 bps).
 
     Returns:
+    -------
         Configured Codec2Wrapper.
     """
     if isinstance(mode, int) and mode not in [m.value for m in Codec2Mode]:

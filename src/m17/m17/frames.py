@@ -1,5 +1,4 @@
-"""
-M17 frames (Legacy Module)
+"""M17 frames (Legacy Module)
 
 .. deprecated:: 0.1.1
     This module is deprecated. Use the :mod:`m17.frames` package instead.
@@ -19,7 +18,7 @@ from typing import Union
 
 from m17 import const as m17_const
 from m17.address import Address
-from m17.misc import print_hex, chunk
+from m17.misc import chunk, print_hex
 
 # Emit deprecation warning on module import
 warnings.warn(
@@ -33,11 +32,11 @@ M17PayloadLayout = struct.Struct(m17_const.M17_PAYLOAD_LAYOUT_STRUCT)
 
 
 class M17Payload:
-    """
-    16b  Frame number counter
+    """16b  Frame number counter
     128b payload
     16b  CRC-16 chksum
     """
+
     sz = M17PayloadLayout.size
 
     def __init__(self, frame_number: int, payload: bytes, crc: int = 0):
@@ -55,44 +54,28 @@ class M17Payload:
         return self.pack()
 
     def get_pack_values(self):
-        return [
-            self.frame_number,
-            *self.payload,
-            self.crc
-        ]
+        return [self.frame_number, *self.payload, self.crc]
 
     def pack(self) -> bytes:
-        """
-        returns the M17Payload as a bytes object
-        """
+        """Returns the M17Payload as a bytes object"""
         return M17PayloadLayout.pack(*self.get_pack_values())
 
     @classmethod
     def unpack(cls, data: bytes) -> "M17Payload":
-        """
-        Convert bytes to M17Payload
-        """
+        """Convert bytes to M17Payload"""
         frame_number, payload, crc = M17PayloadLayout.unpack(data)
         return cls(frame_number, payload, crc)
 
     @classmethod
     def from_bytes(cls, data: bytes) -> "M17Payload":
-        """
-        Convert bytes to M17Payload
-        """
+        """Convert bytes to M17Payload"""
         return M17Payload.unpack(data)
 
     @staticmethod
     def dict_from_bytes(data: bytes) -> dict:
-        """
-        Convert bytes to dict
-        """
+        """Convert bytes to dict"""
         frame_number, payload, crc = M17PayloadLayout.unpack(data)
-        return {
-            "frame_number": frame_number,
-            "payload": payload,
-            "crc": crc
-        }
+        return {"frame_number": frame_number, "payload": payload, "crc": crc}
 
 
 LICHFrameLayout = struct.Struct(m17_const.LICH_FRAME_LAYOUT_STRUCT)
@@ -100,22 +83,18 @@ LICHFrameCRCLayout = struct.Struct(m17_const.LICH_FRAME_CRC_LAYOUT_STRUCT)
 
 
 class LICHFrame:
+    """parts that get replicated in regularFrames:
+    48b  Address dst
+    48b  Address src
+    16b  int(M17_streamtype)
+    112b nonce (for encryption)
+    #if actually sent on RF, needs a 16bit CRC also
     """
-    parts that get replicated in regularFrames:
-        48b  Address dst
-        48b  Address src
-        16b  int(M17_streamtype)
-        112b nonce (for encryption)
-        #if actually sent on RF, needs a 16bit CRC also
-    """
+
     sz = LICHFrameLayout.size
 
     def __init__(
-            self,
-            dst: Address = None,
-            src: Address = None,
-            stream_type: int = None,
-            nonce: bytes = None
+        self, dst: Address = None, src: Address = None, stream_type: int = None, nonce: bytes = None
     ):
         self.src = src
         self.dst = dst
@@ -146,43 +125,31 @@ class LICHFrame:
         return self.pack()
 
     def get_pack_values(self):
-        return [
-            *bytes(self.dst),
-            *bytes(self.src),
-            self.stream_type,
-            *self.nonce
-        ]
+        return [*bytes(self.dst), *bytes(self.src), self.stream_type, *self.nonce]
 
     def pack(self):
-        """
-        returns the InitialCH(dst.addr, src.add, stream_type) as a bytes object
-        """
+        """Returns the InitialCH(dst.addr, src.add, stream_type) as a bytes object"""
         return LICHFrameLayout.pack(*self.get_pack_values())
 
     @classmethod
     def unpack(cls, data: bytes):
-        """
-        Convert bytes to LICHInitializer
-        """
+        """Convert bytes to LICHInitializer"""
         unpacked_list = LICHFrameLayout.unpack(data)
         return cls(
             Address(addr=bytes(unpacked_list[0:6])),
             Address(addr=bytes(unpacked_list[6:12])),
             unpacked_list[12],
-            bytes(unpacked_list[13:])
+            bytes(unpacked_list[13:]),
         )
 
     def chunks(self):
-        """
-        returns the InitialCH(dst.addr, src.add, stream_type) in 6 byte chunks
-        """
+        """Returns the InitialCH(dst.addr, src.add, stream_type) in 6 byte chunks"""
         me = bytes(self)
         return chunk(me, 6)
 
     @staticmethod
     def from_bytes(data: bytes):
-        """
-        Convert bytes to InitialliCH
+        """Convert bytes to InitialliCH
         data: bytes
         returns: InitialliCH
         """
@@ -190,8 +157,7 @@ class LICHFrame:
 
     @staticmethod
     def dict_from_bytes(data: bytes):
-        """
-        Convert bytes to dict
+        """Convert bytes to dict
         data: bytes
         returns: dict
         """
@@ -200,13 +166,12 @@ class LICHFrame:
             "src": lich_object.src,
             "dst": lich_object.dst,
             "stream_type": lich_object.stream_type,
-            "nonce": lich_object.nonce
+            "nonce": lich_object.nonce,
         }
 
     @staticmethod
     def recover_bytes_from_bytes_frames(bytes_frames: list):
-        """
-        Recover bytes from bytes frames
+        """Recover bytes from bytes frames
         bytes_frames: list
         returns: bytes
         """
@@ -239,20 +204,18 @@ RegularFrameLayout = struct.Struct(m17_const.REGULAR_FRAME_LAYOUT_STRUCT)
 
 
 class RegularFrame:
-    """
-    48b  LICH chunk
+    """48b  LICH chunk
     16b  Frame number counter
     128b payload
     16b  CRC-16 chksum
     """
+
     sz = RegularFrameLayout.size
     lich_chunk_sz = int(48 / 8)
     payload_sz = int(128 / 8)
 
     def __init__(self, lich: Union[bytes, LICHFrame], m17_payload: M17Payload):
-        """
-        Can instantiate with either a full LICH object or just a lich_chunk
-        """
+        """Can instantiate with either a full LICH object or just a lich_chunk"""
         self.m17_payload = m17_payload
         self.lich = lich
         if isinstance(lich, bytes):
@@ -272,50 +235,35 @@ class RegularFrame:
         return self.pack()
 
     def get_pack_values(self):
-        return [
-            *self.lich_chunk,
-            *self.m17_payload.get_pack_values()
-        ]
+        return [*self.lich_chunk, *self.m17_payload.get_pack_values()]
 
     def pack(self) -> bytes:
-        """
-        returns the RegularFrame as a bytes object
-        """
+        """Returns the RegularFrame as a bytes object"""
         return RegularFrameLayout.pack(*self.get_pack_values())
 
     @classmethod
     def unpack(cls, data: bytes) -> "RegularFrame":
-        """
-        Convert bytes to RegularFrame
-        """
+        """Convert bytes to RegularFrame"""
         unpacked_values = RegularFrameLayout.unpack(data)
         return cls(
             bytes(unpacked_values[0:6]),
-            M17Payload(
-                unpacked_values[6],
-                bytes(unpacked_values[7:15]),
-                unpacked_values[15]
-            )
+            M17Payload(unpacked_values[6], bytes(unpacked_values[7:15]), unpacked_values[15]),
         )
 
     @classmethod
     def from_bytes(cls, data: bytes) -> "RegularFrame":
-        """
-        Convert bytes to RegularFrame
-        """
+        """Convert bytes to RegularFrame"""
         return RegularFrame.unpack(data)
 
     @staticmethod
     def dict_from_bytes(data: bytes) -> dict:
-        """
-        Convert bytes to dict
-        """
+        """Convert bytes to dict"""
         lich_chunk, frame_number, payload, crc = RegularFrameLayout.unpack(data)
         return {
             "lich_chunk": lich_chunk,
             "frame_number": frame_number,
             "payload": payload,
-            "crc": crc
+            "crc": crc,
         }
 
 
@@ -323,38 +271,35 @@ IPFrameLayout = struct.Struct(m17_const.IP_FRAME_LAYOUT_STRUCT)
 
 
 class IPFrame(RegularFrame):
-    """
-    32b "M17 "
+    """32b "M17 "
     16b  StreamID
     ?    Full LICH bytes (minus CRC)
     16b  Frame number counter
     128b payload
     16b  CRC-16 chksum
     """
+
     sz = IPFrameLayout.size
 
     def __init__(
-            self,
-            magic_number: bytes = b"M17 ",
-            stream_id: int = 0x0,
-            full_lich: LICHFrame = None,
-            m17_payload: M17Payload = None,
-            *args,
-            **kwargs
+        self,
+        magic_number: bytes = b"M17 ",
+        stream_id: int = 0x0,
+        full_lich: LICHFrame = None,
+        m17_payload: M17Payload = None,
+        *args,
+        **kwargs,
     ):
-        super().__init__(
-            full_lich,
-            m17_payload,
-            *args,
-            **kwargs
-        )
+        super().__init__(full_lich, m17_payload, *args, **kwargs)
         self.magic_number = magic_number
         self.stream_id = stream_id
 
     def __str__(self):
-        return (f"SID: {self.stream_id:04x}\n"
-                f"LICH: {self.lich.src.callsign} =[ {self.lich.stream_type} ]> {self.lich.dst.callsign}\n"
-                f"M17[ {self.m17_payload.frame_number} ]: {print_hex(self.m17_payload.payload)}")
+        return (
+            f"SID: {self.stream_id:04x}\n"
+            f"LICH: {self.lich.src.callsign} =[ {self.lich.stream_type} ]> {self.lich.dst.callsign}\n"
+            f"M17[ {self.m17_payload.frame_number} ]: {print_hex(self.m17_payload.payload)}"
+        )
 
     def __bytes__(self):
         return self.pack()
@@ -364,7 +309,7 @@ class IPFrame(RegularFrame):
             *self.magic_number,
             self.stream_id,
             *self.lich.get_pack_values(),
-            *self.m17_payload.get_pack_values()
+            *self.m17_payload.get_pack_values(),
         ]
         return ret_val
 
@@ -381,13 +326,9 @@ class IPFrame(RegularFrame):
                 Address(addr=bytes(unpacked_values[5:11])),
                 Address(addr=bytes(unpacked_values[11:17])),
                 unpacked_values[17],
-                bytes(unpacked_values[18:32])
+                bytes(unpacked_values[18:32]),
             ),
-            M17Payload(
-                unpacked_values[32],
-                bytes(unpacked_values[33:41]),
-                unpacked_values[41]
-            )
+            M17Payload(unpacked_values[32], bytes(unpacked_values[33:41]), unpacked_values[41]),
         )
 
     @classmethod
@@ -401,7 +342,17 @@ class IPFrame(RegularFrame):
     @staticmethod
     def dict_from_bytes(data: bytes):
         assert IPFrame.is_m17(data)
-        magic_number, stream_id, dst, src, stream_type, nonce, frame_number, payload, crc = IPFrameLayout.unpack(data)
+        (
+            magic_number,
+            stream_id,
+            dst,
+            src,
+            stream_type,
+            nonce,
+            frame_number,
+            payload,
+            crc,
+        ) = IPFrameLayout.unpack(data)
         return {
             "magic_number": magic_number,
             "stream_id": stream_id,
@@ -411,21 +362,19 @@ class IPFrame(RegularFrame):
             "nonce": nonce,
             "frame_number": frame_number,
             "payload": payload,
-            "crc": crc
+            "crc": crc,
         }
 
 
 def is_lich(b: bytes):
-    """
-    No real way to tell other than size with the implementation in this file
+    """No real way to tell other than size with the implementation in this file
     in RF, they would be the same size
     """
     return len(b) == LICHFrame.sz
 
 
 class M17_Frametype(int):
-    """
-    low bits v high bits
+    """low bits v high bits
     stream?
     data?
     voice?
@@ -436,6 +385,7 @@ class M17_Frametype(int):
     remaining of 16: reserved
     codec2 3200bps voice stream 00101
     """
+
     fields = [
         (1, "is_stream"),
         (1, "has_data"),

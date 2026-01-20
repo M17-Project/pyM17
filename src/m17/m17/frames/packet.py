@@ -1,5 +1,4 @@
-"""
-M17 Packet Frame Definitions
+"""M17 Packet Frame Definitions
 
 Packet frames carry non-real-time data in a self-contained format.
 Each packet contains:
@@ -14,23 +13,22 @@ Supports M17 v2.0.3 and v3.0.0 (with TLE packet type).
 from __future__ import annotations
 
 import logging
-import struct
+from collections.abc import Iterator
 from dataclasses import dataclass, field
-from typing import Iterator, List, Optional
 from enum import IntEnum
 
 from m17.core.crc import crc_m17
 
 logger = logging.getLogger(__name__)
 from m17.core.constants import (
-    PACKET_PROTOCOL_RAW,
-    PACKET_PROTOCOL_AX25,
-    PACKET_PROTOCOL_APRS,
     PACKET_PROTOCOL_6LOWPAN,
+    PACKET_PROTOCOL_APRS,
+    PACKET_PROTOCOL_AX25,
     PACKET_PROTOCOL_IPV4,
+    PACKET_PROTOCOL_RAW,
     PACKET_PROTOCOL_SMS,
-    PACKET_PROTOCOL_WINLINK,
     PACKET_PROTOCOL_TLE,
+    PACKET_PROTOCOL_WINLINK,
 )
 
 __all__ = ["PacketFrame", "PacketChunk", "PacketProtocol", "TLEPacket"]
@@ -51,14 +49,14 @@ class PacketProtocol(IntEnum):
 
 @dataclass
 class PacketChunk:
-    """
-    A single chunk of packet data.
+    """A single chunk of packet data.
 
     Each chunk contains up to 25 bytes of data plus a control byte
     that indicates whether this is the last chunk and how many
     bytes are valid in the last chunk.
 
-    Attributes:
+    Attributes
+    ----------
         data: Up to 25 bytes of payload data.
         is_last: True if this is the final chunk.
         byte_count: Number of valid bytes in final chunk (0-25).
@@ -76,16 +74,13 @@ class PacketChunk:
 
         # Pad or truncate data to 25 bytes
         if len(self.data) < 25:
-            object.__setattr__(
-                self, "data", self.data + bytes(25 - len(self.data))
-            )
+            object.__setattr__(self, "data", self.data + bytes(25 - len(self.data)))
         elif len(self.data) > 25:
             object.__setattr__(self, "data", self.data[:25])
 
     @property
     def control_byte(self) -> int:
-        """
-        Get the control byte.
+        """Get the control byte.
 
         Format: [EOP:1][BC:5][Reserved:2]
         - EOP: End of Packet flag (1 = last chunk)
@@ -103,10 +98,10 @@ class PacketChunk:
         return self.data
 
     def to_bytes(self) -> bytes:
-        """
-        Serialize chunk to 26 bytes.
+        """Serialize chunk to 26 bytes.
 
-        Returns:
+        Returns
+        -------
             26-byte serialized chunk.
         """
         return self.data + bytes([self.control_byte])
@@ -117,13 +112,14 @@ class PacketChunk:
 
     @classmethod
     def from_bytes(cls, data: bytes) -> PacketChunk:
-        """
-        Parse chunk from bytes.
+        """Parse chunk from bytes.
 
         Args:
+        ----
             data: 26 bytes of chunk data.
 
         Returns:
+        -------
             Parsed PacketChunk.
         """
         if len(data) != 26:
@@ -145,29 +141,30 @@ class PacketChunk:
 
 @dataclass
 class PacketFrame:
-    """
-    M17 Packet Frame.
+    """M17 Packet Frame.
 
     Represents a complete packet which may span multiple chunks.
     Includes the full LSF followed by one or more data chunks with CRC.
 
-    Attributes:
+    Attributes
+    ----------
         chunks: List of PacketChunk objects.
     """
 
-    chunks: List[PacketChunk] = field(default_factory=list)
+    chunks: list[PacketChunk] = field(default_factory=list)
 
     @classmethod
     def from_data(cls, data: bytes) -> PacketFrame:
-        """
-        Create a packet frame from raw data.
+        """Create a packet frame from raw data.
 
         Splits data into 25-byte chunks and adds control bytes.
 
         Args:
+        ----
             data: Raw data bytes to packetize.
 
         Returns:
+        -------
             PacketFrame with chunked data.
         """
         chunks = []
@@ -178,9 +175,7 @@ class PacketFrame:
             is_last = i + 25 >= len(data)
             byte_count = len(chunk_data) if is_last else 25
 
-            chunk = PacketChunk(
-                data=chunk_data, is_last=is_last, byte_count=byte_count
-            )
+            chunk = PacketChunk(data=chunk_data, is_last=is_last, byte_count=byte_count)
             chunks.append(chunk)
 
         # If no data, create single empty last chunk
@@ -190,10 +185,10 @@ class PacketFrame:
         return cls(chunks=chunks)
 
     def get_data(self) -> bytes:
-        """
-        Extract the full data from all chunks.
+        """Extract the full data from all chunks.
 
-        Returns:
+        Returns
+        -------
             Concatenated valid data from all chunks.
         """
         data = bytearray()
@@ -202,10 +197,10 @@ class PacketFrame:
         return bytes(data)
 
     def calculate_crc(self) -> int:
-        """
-        Calculate CRC for the entire packet data.
+        """Calculate CRC for the entire packet data.
 
-        Returns:
+        Returns
+        -------
             16-bit CRC value.
         """
         return crc_m17(self.get_data())
@@ -220,11 +215,11 @@ class PacketFrame:
         """Get total number of data bytes."""
         return len(self.get_data())
 
-    def to_bytes_list(self) -> List[bytes]:
-        """
-        Serialize all chunks to a list of byte arrays.
+    def to_bytes_list(self) -> list[bytes]:
+        """Serialize all chunks to a list of byte arrays.
 
-        Returns:
+        Returns
+        -------
             List of 26-byte chunk serializations.
         """
         return [bytes(chunk) for chunk in self.chunks]
@@ -233,7 +228,7 @@ class PacketFrame:
         """Return string representation."""
         return f"PacketFrame: {self.total_chunks} chunks, {self.total_bytes} bytes"
 
-    def __iter__(self) -> "Iterator[PacketChunk]":
+    def __iter__(self) -> Iterator[PacketChunk]:
         """Iterate over chunks."""
         return iter(self.chunks)
 
@@ -248,8 +243,7 @@ class PacketFrame:
 
 @dataclass
 class TLEPacket:
-    """
-    M17 v3.0.0 TLE (Two-Line Element) Packet.
+    """M17 v3.0.0 TLE (Two-Line Element) Packet.
 
     Contains satellite orbital data in TLE format.
     The TLE format consists of 3 lines:
@@ -312,10 +306,10 @@ class TLEPacket:
         return True
 
     def to_bytes(self) -> bytes:
-        """
-        Encode TLE packet to bytes.
+        """Encode TLE packet to bytes.
 
-        Returns:
+        Returns
+        -------
             Encoded packet with protocol ID, TLE data, null terminator, and CRC.
         """
         # Build TLE text with newlines
@@ -334,17 +328,19 @@ class TLEPacket:
         return packet_data + crc.to_bytes(2, "big")
 
     @classmethod
-    def from_bytes(cls, data: bytes) -> "TLEPacket":
-        """
-        Parse TLE packet from bytes.
+    def from_bytes(cls, data: bytes) -> TLEPacket:
+        """Parse TLE packet from bytes.
 
         Args:
+        ----
             data: Encoded TLE packet bytes.
 
         Returns:
+        -------
             Parsed TLEPacket.
 
         Raises:
+        ------
             ValueError: If packet is invalid or CRC fails.
         """
         if len(data) < 4:  # Minimum: protocol + null + CRC
@@ -352,7 +348,9 @@ class TLEPacket:
 
         # Check protocol identifier
         if data[0] != PACKET_PROTOCOL_TLE:
-            raise ValueError(f"Invalid protocol ID: 0x{data[0]:02x}, expected 0x{PACKET_PROTOCOL_TLE:02x}")
+            raise ValueError(
+                f"Invalid protocol ID: 0x{data[0]:02x}, expected 0x{PACKET_PROTOCOL_TLE:02x}"
+            )
 
         # Verify CRC
         packet_data = data[:-2]
@@ -388,23 +386,24 @@ class TLEPacket:
         )
 
     def to_packet_frame(self) -> PacketFrame:
-        """
-        Convert to a PacketFrame for transmission.
+        """Convert to a PacketFrame for transmission.
 
-        Returns:
+        Returns
+        -------
             PacketFrame containing the TLE data.
         """
         return PacketFrame.from_data(self.to_bytes())
 
     @classmethod
-    def from_packet_frame(cls, frame: PacketFrame) -> "TLEPacket":
-        """
-        Parse TLE from a PacketFrame.
+    def from_packet_frame(cls, frame: PacketFrame) -> TLEPacket:
+        """Parse TLE from a PacketFrame.
 
         Args:
+        ----
             frame: PacketFrame containing TLE data.
 
         Returns:
+        -------
             Parsed TLEPacket.
         """
         return cls.from_bytes(frame.get_data())
@@ -415,10 +414,10 @@ class TLEPacket:
         return f"TLEPacket({self.satellite_name}, {valid})"
 
     def to_tle_string(self) -> str:
-        """
-        Return the TLE in standard 3-line format.
+        """Return the TLE in standard 3-line format.
 
-        Returns:
+        Returns
+        -------
             TLE string with newlines.
         """
         return f"{self.satellite_name}\n{self.tle_line1}\n{self.tle_line2}"

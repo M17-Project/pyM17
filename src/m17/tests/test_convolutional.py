@@ -1,5 +1,4 @@
-"""
-Tests for M17 Convolutional Encoder
+"""Tests for M17 Convolutional Encoder
 
 Tests the K=5 rate 1/2 convolutional encoder.
 """
@@ -7,15 +6,15 @@ Tests the K=5 rate 1/2 convolutional encoder.
 import pytest
 
 from m17.codec.convolutional import (
-    conv_encode,
-    conv_encode_lsf,
-    conv_encode_stream,
-    conv_encode_packet,
-    conv_encode_bert,
-    conv_encode_bytes,
     POLY_G1,
     POLY_G2,
     _unpack_bits,
+    conv_encode,
+    conv_encode_bert,
+    conv_encode_bytes,
+    conv_encode_lsf,
+    conv_encode_packet,
+    conv_encode_stream,
 )
 
 

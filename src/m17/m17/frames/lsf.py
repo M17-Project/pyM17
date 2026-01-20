@@ -1,5 +1,4 @@
-"""
-M17 Link Setup Frame (LSF)
+"""M17 Link Setup Frame (LSF)
 
 The Link Setup Frame is transmitted at the start of a stream and contains:
 - Destination address (6 bytes)
@@ -17,30 +16,29 @@ Port from libm17/payload/lsf.c with GNSS position encoding.
 
 from __future__ import annotations
 
-import math
 from dataclasses import dataclass, field
 from enum import IntEnum
-from typing import Optional, Union, List
+from typing import Union
 
 from m17.core.address import Address
 from m17.core.crc import crc_m17
 from m17.core.types import (
     # v2.0.3 (legacy)
     M17DataType,
+    M17Encryption,
     M17EncryptionSubtype,
     M17EncryptionType,
+    M17Meta,
+    M17Payload,
     M17Type,
-    build_type_field,
-    parse_type_field,
     # v3.0.0
     M17Version,
-    M17Payload,
-    M17Encryption,
-    M17Meta,
     TypeFieldV3,
+    build_type_field,
     build_type_field_v3,
-    parse_type_field_v3,
     detect_type_field_version,
+    parse_type_field,
+    parse_type_field_v3,
 )
 
 __all__ = [
@@ -114,8 +112,7 @@ class ValidityField(IntEnum):
 
 @dataclass
 class MetaPosition:
-    """
-    GNSS Position META field encoding.
+    """GNSS Position META field encoding.
 
     Encodes latitude, longitude, altitude, speed, and bearing
     into the 14-byte META field per M17 spec v2.0.0+ metric format.
@@ -132,10 +129,10 @@ class MetaPosition:
     radius: float = 1.0  # Position uncertainty in meters (1, 2, 4, 8, 16, 32, 64, 128)
 
     def to_bytes(self) -> bytes:
-        """
-        Encode position data to 14-byte META field.
+        """Encode position data to 14-byte META field.
 
-        Returns:
+        Returns
+        -------
             14-byte META field.
         """
         tmp = bytearray(14)
@@ -153,9 +150,7 @@ class MetaPosition:
                 break
 
         tmp[1] = (
-            ((self.validity & 0x0F) << 4)
-            | ((log_r & 0x07) << 1)
-            | ((self.bearing >> 8) & 0x01)
+            ((self.validity & 0x0F) << 4) | ((log_r & 0x07) << 1) | ((self.bearing >> 8) & 0x01)
         )
 
         # Byte 2: bearing LSB
@@ -192,13 +187,14 @@ class MetaPosition:
 
     @classmethod
     def from_bytes(cls, data: bytes) -> MetaPosition:
-        """
-        Decode 14-byte META field to position data.
+        """Decode 14-byte META field to position data.
 
         Args:
+        ----
             data: 14-byte META field.
 
         Returns:
+        -------
             MetaPosition with decoded values.
         """
         if len(data) != 14:
@@ -246,8 +242,7 @@ class MetaPosition:
 
 @dataclass
 class MetaExtendedCallsign:
-    """
-    Extended Callsign Data (ECD) META field encoding.
+    """Extended Callsign Data (ECD) META field encoding.
 
     Contains two additional callsign fields for extended routing.
     """
@@ -256,10 +251,10 @@ class MetaExtendedCallsign:
     callsign_field_2: str = ""
 
     def to_bytes(self) -> bytes:
-        """
-        Encode extended callsign data to 14-byte META field.
+        """Encode extended callsign data to 14-byte META field.
 
-        Returns:
+        Returns
+        -------
             14-byte META field.
         """
         cf1_addr = Address(callsign=self.callsign_field_1 or " ")
@@ -282,13 +277,14 @@ class MetaExtendedCallsign:
 
     @classmethod
     def from_bytes(cls, data: bytes) -> MetaExtendedCallsign:
-        """
-        Decode 14-byte META field to extended callsign data.
+        """Decode 14-byte META field to extended callsign data.
 
         Args:
+        ----
             data: 14-byte META field.
 
         Returns:
+        -------
             MetaExtendedCallsign with decoded values.
         """
         if len(data) != 14:
@@ -302,8 +298,7 @@ class MetaExtendedCallsign:
 
 @dataclass
 class MetaNonce:
-    """
-    Nonce META field for encryption.
+    """Nonce META field for encryption.
 
     Contains 4-byte timestamp (Unix epoch - 2020 epoch) and 10-byte random data.
     """
@@ -315,10 +310,10 @@ class MetaNonce:
     _EPOCH_2020: int = 1577836800
 
     def to_bytes(self) -> bytes:
-        """
-        Encode nonce data to 14-byte META field.
+        """Encode nonce data to 14-byte META field.
 
-        Returns:
+        Returns
+        -------
             14-byte META field.
         """
         tmp = bytearray(14)
@@ -332,20 +327,25 @@ class MetaNonce:
         tmp[0:4] = ts_2020.to_bytes(4, "big")
 
         # Random data (10 bytes)
-        random_bytes = self.random_data[:10] if len(self.random_data) >= 10 else self.random_data + bytes(10 - len(self.random_data))
+        random_bytes = (
+            self.random_data[:10]
+            if len(self.random_data) >= 10
+            else self.random_data + bytes(10 - len(self.random_data))
+        )
         tmp[4:14] = random_bytes
 
         return bytes(tmp)
 
     @classmethod
     def from_bytes(cls, data: bytes) -> MetaNonce:
-        """
-        Decode 14-byte META field to nonce data.
+        """Decode 14-byte META field to nonce data.
 
         Args:
+        ----
             data: 14-byte META field.
 
         Returns:
+        -------
             MetaNonce with decoded values.
         """
         if len(data) != 14:
@@ -360,8 +360,7 @@ class MetaNonce:
 
 @dataclass
 class MetaText:
-    """
-    M17 v3.0.0 Text Data META field encoding.
+    """M17 v3.0.0 Text Data META field encoding.
 
     In Stream Mode, text can span up to 15 consecutive META blocks,
     allowing up to 195 bytes (15 * 13) of UTF-8 text.
@@ -383,12 +382,12 @@ class MetaText:
     _MAX_BLOCKS: int = 15
 
     def to_bytes(self) -> bytes:
-        """
-        Encode text data to 14-byte META field (single block).
+        """Encode text data to 14-byte META field (single block).
 
         For multi-block text, use to_blocks() instead.
 
-        Returns:
+        Returns
+        -------
             14-byte META field.
         """
         tmp = bytearray(14)
@@ -397,20 +396,21 @@ class MetaText:
         tmp[0] = ((self.block_count & 0x0F) << 4) | (self.block_index & 0x0F)
 
         # UTF-8 text data (up to 13 bytes)
-        text_bytes = self.text.encode("utf-8")[:self._MAX_TEXT_PER_BLOCK]
+        text_bytes = self.text.encode("utf-8")[: self._MAX_TEXT_PER_BLOCK]
         tmp[1 : 1 + len(text_bytes)] = text_bytes
 
         return bytes(tmp)
 
     @classmethod
     def from_bytes(cls, data: bytes) -> MetaText:
-        """
-        Decode 14-byte META field to text data.
+        """Decode 14-byte META field to text data.
 
         Args:
+        ----
             data: 14-byte META field.
 
         Returns:
+        -------
             MetaText with decoded values.
         """
         if len(data) != 14:
@@ -433,17 +433,19 @@ class MetaText:
         return cls(text=text, block_count=block_count, block_index=block_index)
 
     @classmethod
-    def encode_multi_block(cls, text: str) -> List[bytes]:
-        """
-        Encode long text into multiple META blocks for stream mode.
+    def encode_multi_block(cls, text: str) -> list[bytes]:
+        """Encode long text into multiple META blocks for stream mode.
 
         Args:
+        ----
             text: UTF-8 text to encode.
 
         Returns:
+        -------
             List of 14-byte META blocks.
 
         Raises:
+        ------
             ValueError: If text is too long (> 195 bytes).
         """
         text_bytes = text.encode("utf-8")
@@ -475,14 +477,15 @@ class MetaText:
         return blocks
 
     @classmethod
-    def decode_multi_block(cls, blocks: List[bytes]) -> str:
-        """
-        Decode multiple META blocks back to text.
+    def decode_multi_block(cls, blocks: list[bytes]) -> str:
+        """Decode multiple META blocks back to text.
 
         Args:
+        ----
             blocks: List of 14-byte META blocks.
 
         Returns:
+        -------
             Reconstructed UTF-8 text.
         """
         # Sort blocks by index
@@ -495,8 +498,7 @@ class MetaText:
 
 @dataclass
 class MetaAesIV:
-    """
-    M17 v3.0.0 AES Initialization Vector META field.
+    """M17 v3.0.0 AES Initialization Vector META field.
 
     Contains the 14-byte IV for AES encryption.
     Note: Full AES IV is 16 bytes; the remaining 2 bytes
@@ -506,10 +508,10 @@ class MetaAesIV:
     iv: bytes = field(default_factory=lambda: bytes(14))
 
     def to_bytes(self) -> bytes:
-        """
-        Encode AES IV to 14-byte META field.
+        """Encode AES IV to 14-byte META field.
 
-        Returns:
+        Returns
+        -------
             14-byte META field.
         """
         if len(self.iv) < 14:
@@ -518,13 +520,14 @@ class MetaAesIV:
 
     @classmethod
     def from_bytes(cls, data: bytes) -> MetaAesIV:
-        """
-        Decode 14-byte META field to AES IV.
+        """Decode 14-byte META field to AES IV.
 
         Args:
+        ----
             data: 14-byte META field.
 
         Returns:
+        -------
             MetaAesIV with decoded value.
         """
         if len(data) != 14:
@@ -535,12 +538,12 @@ class MetaAesIV:
 
 @dataclass
 class LinkSetupFrame:
-    """
-    M17 Link Setup Frame.
+    """M17 Link Setup Frame.
 
     Contains addressing and stream configuration information.
 
-    Attributes:
+    Attributes
+    ----------
         dst: Destination address (or callsign string that will be converted).
         src: Source address (or callsign string that will be converted).
         type_field: 16-bit TYPE field value.
@@ -627,10 +630,10 @@ class LinkSetupFrame:
         validity: ValidityField = ValidityField.ALL_VALID,
         radius: float = 1.0,
     ) -> None:
-        """
-        Set META field with GNSS position data.
+        """Set META field with GNSS position data.
 
         Args:
+        ----
             latitude: Latitude in degrees (-90 to +90).
             longitude: Longitude in degrees (-180 to +180).
             altitude: Altitude in meters (-500 to 32267.5).
@@ -655,19 +658,19 @@ class LinkSetupFrame:
         self.meta = pos.to_bytes()
 
     def get_position_meta(self) -> MetaPosition:
-        """
-        Get position data from META field.
+        """Get position data from META field.
 
-        Returns:
+        Returns
+        -------
             MetaPosition with decoded values.
         """
         return MetaPosition.from_bytes(self.meta)
 
     def set_extended_callsign_meta(self, cf1: str, cf2: str) -> None:
-        """
-        Set META field with Extended Callsign Data.
+        """Set META field with Extended Callsign Data.
 
         Args:
+        ----
             cf1: Callsign Field 1.
             cf2: Callsign Field 2.
         """
@@ -675,19 +678,19 @@ class LinkSetupFrame:
         self.meta = ecd.to_bytes()
 
     def get_extended_callsign_meta(self) -> MetaExtendedCallsign:
-        """
-        Get extended callsign data from META field.
+        """Get extended callsign data from META field.
 
-        Returns:
+        Returns
+        -------
             MetaExtendedCallsign with decoded values.
         """
         return MetaExtendedCallsign.from_bytes(self.meta)
 
     def set_nonce_meta(self, timestamp: int, random_data: bytes) -> None:
-        """
-        Set META field with nonce for encryption.
+        """Set META field with nonce for encryption.
 
         Args:
+        ----
             timestamp: Unix timestamp.
             random_data: 10-byte random data.
         """
@@ -695,10 +698,10 @@ class LinkSetupFrame:
         self.meta = nonce.to_bytes()
 
     def get_nonce_meta(self) -> MetaNonce:
-        """
-        Get nonce data from META field.
+        """Get nonce data from META field.
 
-        Returns:
+        Returns
+        -------
             MetaNonce with decoded values.
         """
         return MetaNonce.from_bytes(self.meta)
@@ -749,10 +752,10 @@ class LinkSetupFrame:
         meta: M17Meta = M17Meta.NONE,
         can: int = 0,
     ) -> None:
-        """
-        Set TYPE field using v3.0.0 format.
+        """Set TYPE field using v3.0.0 format.
 
         Args:
+        ----
             payload: Payload/codec type.
             encryption: Encryption method.
             signed: Digital signature flag.
@@ -766,42 +769,42 @@ class LinkSetupFrame:
     # =========================================================================
 
     def set_text_meta(self, text: str) -> None:
-        """
-        Set META field with text data (v3.0.0).
+        """Set META field with text data (v3.0.0).
 
         For single-block text (up to 13 bytes). For longer text,
         use set_text_meta_blocks() which returns multiple LSFs.
 
         Args:
+        ----
             text: UTF-8 text (up to 13 bytes).
         """
         meta_text = MetaText(text=text[:13], block_count=1, block_index=1)
         self.meta = meta_text.to_bytes()
 
     def get_text_meta(self) -> MetaText:
-        """
-        Get text data from META field (v3.0.0).
+        """Get text data from META field (v3.0.0).
 
-        Returns:
+        Returns
+        -------
             MetaText with decoded values.
         """
         return MetaText.from_bytes(self.meta)
 
     def set_aes_iv_meta(self, iv: bytes) -> None:
-        """
-        Set META field with AES IV (v3.0.0).
+        """Set META field with AES IV (v3.0.0).
 
         Args:
+        ----
             iv: 14-byte AES initialization vector.
         """
         aes_iv = MetaAesIV(iv=iv)
         self.meta = aes_iv.to_bytes()
 
     def get_aes_iv_meta(self) -> MetaAesIV:
-        """
-        Get AES IV from META field (v3.0.0).
+        """Get AES IV from META field (v3.0.0).
 
-        Returns:
+        Returns
+        -------
             MetaAesIV with decoded value.
         """
         return MetaAesIV.from_bytes(self.meta)
@@ -813,17 +816,18 @@ class LinkSetupFrame:
         src: Union[str, Address],
         text: str,
         can: int = 0,
-    ) -> List["LinkSetupFrame"]:
-        """
-        Create multiple LSFs for a multi-block text message (v3.0.0).
+    ) -> list[LinkSetupFrame]:
+        """Create multiple LSFs for a multi-block text message (v3.0.0).
 
         Args:
+        ----
             dst: Destination address.
             src: Source address.
             text: UTF-8 text to send (up to 195 bytes).
             can: Channel Access Number.
 
         Returns:
+        -------
             List of LinkSetupFrames, one per text block.
         """
         blocks = MetaText.encode_multi_block(text)
@@ -842,19 +846,19 @@ class LinkSetupFrame:
         return frames
 
     def to_bytes_without_crc(self) -> bytes:
-        """
-        Serialize LSF without CRC (28 bytes).
+        """Serialize LSF without CRC (28 bytes).
 
-        Returns:
+        Returns
+        -------
             28-byte LSF data.
         """
         return bytes(self.dst) + bytes(self.src) + self.type_field.to_bytes(2, "big") + self.meta
 
     def to_bytes(self) -> bytes:
-        """
-        Serialize LSF with CRC (30 bytes).
+        """Serialize LSF with CRC (30 bytes).
 
-        Returns:
+        Returns
+        -------
             30-byte LSF data with CRC.
         """
         data = self.to_bytes_without_crc()
@@ -867,17 +871,19 @@ class LinkSetupFrame:
 
     @classmethod
     def from_bytes(cls, data: bytes, has_crc: bool = False) -> LinkSetupFrame:
-        """
-        Parse LSF from bytes.
+        """Parse LSF from bytes.
 
         Args:
+        ----
             data: 28 or 30 bytes of LSF data.
             has_crc: True if data includes 2-byte CRC.
 
         Returns:
+        -------
             Parsed LinkSetupFrame.
 
         Raises:
+        ------
             ValueError: If data length is wrong or CRC is invalid.
         """
         expected_len = 30 if has_crc else 28
@@ -898,13 +904,14 @@ class LinkSetupFrame:
         return cls(dst=dst, src=src, type_field=type_field, meta=meta)
 
     def chunks(self, chunk_size: int = 6) -> list[bytes]:
-        """
-        Split LSF into chunks for LICH transmission.
+        """Split LSF into chunks for LICH transmission.
 
         Args:
+        ----
             chunk_size: Size of each chunk (default 6 bytes).
 
         Returns:
+        -------
             List of byte chunks.
         """
         data = bytes(self)

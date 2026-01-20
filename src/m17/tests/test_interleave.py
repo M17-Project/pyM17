@@ -1,13 +1,12 @@
-"""
-Tests for M17 interleaver.
+"""Tests for M17 interleaver.
 """
 
 import pytest
 
 from m17.codec.interleave import (
-    interleave,
-    deinterleave,
     INTERLEAVE_SEQ,
+    deinterleave,
+    interleave,
 )
 
 

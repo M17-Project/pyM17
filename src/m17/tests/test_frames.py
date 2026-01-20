@@ -1,24 +1,20 @@
-"""
-Test the encoding and decoding of M17 frames.
+"""Test the encoding and decoding of M17 frames.
 
 Updated for modernized pyM17 API (v0.1.x).
 """
 import unittest
 
 from m17.core.address import Address
-from m17.misc import example_bytes
-from m17.frames import LICHFrame, StreamFrame, IPFrame, M17Payload
+from m17.frames import IPFrame, LICHFrame, M17Payload, StreamFrame
 from m17.frames.lsf import LinkSetupFrame
+from m17.misc import example_bytes
 
 
 class test_frame_encodings(unittest.TestCase):
-    """
-    Test the encoding and decoding of M17 frames.
-    """
+    """Test the encoding and decoding of M17 frames."""
+
     def test_lich(self):
-        """
-        Test encoding and decoding of LICH frames.
-        """
+        """Test encoding and decoding of LICH frames."""
         lich = LICHFrame(
             dst=Address(callsign="SP5WWP"),
             src=Address(callsign="W2FBI"),
@@ -30,9 +26,7 @@ class test_frame_encodings(unittest.TestCase):
         assert lich == lich2
 
     def test_stream_frame(self):
-        """
-        Test encoding and decoding of stream frames (formerly RegularFrame).
-        """
+        """Test encoding and decoding of stream frames (formerly RegularFrame)."""
         lich = LICHFrame(
             dst=Address(callsign="SP5WWP"),
             src=Address(callsign="W2FBI"),
@@ -50,9 +44,7 @@ class test_frame_encodings(unittest.TestCase):
         assert z == x
 
     def test_ip_frame(self):
-        """
-        Test encoding and decoding of IP frames.
-        """
+        """Test encoding and decoding of IP frames."""
         # IPFrame uses LinkSetupFrame (lsf) instead of LICHFrame
         lsf = LinkSetupFrame(
             dst=Address(callsign="SP5WWP"),
@@ -63,11 +55,7 @@ class test_frame_encodings(unittest.TestCase):
 
         m17_payload = M17Payload(frame_number=1, payload=bytes(example_bytes(16)))
 
-        x = IPFrame(
-            stream_id=0xf00d,
-            lsf=lsf,
-            payload=m17_payload
-        )
+        x = IPFrame(stream_id=0xF00D, lsf=lsf, payload=m17_payload)
         y = bytes(x)
         z = IPFrame.from_bytes(y)
         assert z == x

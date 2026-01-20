@@ -1,5 +1,4 @@
-"""
-M17 Stream Frame Definitions
+"""M17 Stream Frame Definitions
 
 Stream frames carry real-time voice and/or data content.
 Each frame contains:
@@ -15,22 +14,20 @@ from __future__ import annotations
 
 import struct
 from dataclasses import dataclass, field
-from typing import Optional, Union
 
 from m17.core.crc import crc_m17
-from m17.core.constants import EOT_MARKER
 
 __all__ = ["M17Payload", "StreamFrame"]
 
 
 @dataclass
 class M17Payload:
-    """
-    M17 Stream Payload.
+    """M17 Stream Payload.
 
     Contains frame number, payload data, and optional CRC.
 
-    Attributes:
+    Attributes
+    ----------
         frame_number: 16-bit frame counter (MSB indicates EOT).
         payload: 16-byte (128-bit) payload data.
         crc: Optional 16-bit CRC for RF frames.
@@ -47,9 +44,7 @@ class M17Payload:
         # Ensure payload is exactly 16 bytes
         if len(self.payload) != 16:
             if len(self.payload) < 16:
-                object.__setattr__(
-                    self, "payload", self.payload + bytes(16 - len(self.payload))
-                )
+                object.__setattr__(self, "payload", self.payload + bytes(16 - len(self.payload)))
             else:
                 object.__setattr__(self, "payload", self.payload[:16])
 
@@ -75,32 +70,33 @@ class M17Payload:
             self.frame_number &= 0x7FFF
 
     def calculate_crc(self, lich_chunk: bytes) -> int:
-        """
-        Calculate CRC for this payload with its LICH chunk.
+        """Calculate CRC for this payload with its LICH chunk.
 
         Args:
+        ----
             lich_chunk: 6-byte LICH chunk for this frame.
 
         Returns:
+        -------
             16-bit CRC value.
         """
         data = lich_chunk + self.frame_number.to_bytes(2, "big") + self.payload
         return crc_m17(data)
 
     def to_bytes(self) -> bytes:
-        """
-        Serialize payload to bytes.
+        """Serialize payload to bytes.
 
-        Returns:
+        Returns
+        -------
             20-byte serialized payload (frame_num + payload + crc).
         """
         return self._STRUCT.pack(self.frame_number, self.payload, self.crc)
 
     def to_bytes_without_crc(self) -> bytes:
-        """
-        Serialize payload without CRC.
+        """Serialize payload without CRC.
 
-        Returns:
+        Returns
+        -------
             18-byte serialized payload (frame_num + payload).
         """
         return self.frame_number.to_bytes(2, "big") + self.payload
@@ -111,14 +107,15 @@ class M17Payload:
 
     @classmethod
     def from_bytes(cls, data: bytes, has_crc: bool = True) -> M17Payload:
-        """
-        Parse payload from bytes.
+        """Parse payload from bytes.
 
         Args:
+        ----
             data: 18 or 20 bytes of payload data.
             has_crc: True if data includes 2-byte CRC.
 
         Returns:
+        -------
             Parsed M17Payload.
         """
         if has_crc:
@@ -142,10 +139,7 @@ class M17Payload:
     def __eq__(self, other: object) -> bool:
         """Compare payloads."""
         if isinstance(other, M17Payload):
-            return (
-                self.frame_number == other.frame_number
-                and self.payload == other.payload
-            )
+            return self.frame_number == other.frame_number and self.payload == other.payload
         if isinstance(other, bytes):
             return bytes(self) == other
         return NotImplemented
@@ -153,13 +147,13 @@ class M17Payload:
 
 @dataclass
 class StreamFrame:
-    """
-    M17 Stream Frame (RF format).
+    """M17 Stream Frame (RF format).
 
     Contains LICH chunk + payload for over-the-air transmission.
     This is the format used after FEC encoding for RF.
 
-    Attributes:
+    Attributes
+    ----------
         lich_chunk: 6-byte LICH chunk.
         payload: M17Payload with frame data.
     """
@@ -200,10 +194,10 @@ class StreamFrame:
         return self.payload.calculate_crc(self.lich_chunk)
 
     def to_bytes(self) -> bytes:
-        """
-        Serialize frame to bytes.
+        """Serialize frame to bytes.
 
-        Returns:
+        Returns
+        -------
             26-byte serialized frame.
         """
         crc = self.calculate_crc()
@@ -220,13 +214,14 @@ class StreamFrame:
 
     @classmethod
     def from_bytes(cls, data: bytes) -> StreamFrame:
-        """
-        Parse stream frame from bytes.
+        """Parse stream frame from bytes.
 
         Args:
+        ----
             data: 26 bytes of frame data.
 
         Returns:
+        -------
             Parsed StreamFrame.
         """
         if len(data) != 26:
@@ -234,21 +229,20 @@ class StreamFrame:
 
         lich_chunk, frame_number, payload_data, crc = cls._STRUCT.unpack(data)
 
-        payload = M17Payload(
-            frame_number=frame_number, payload=payload_data, crc=crc
-        )
+        payload = M17Payload(frame_number=frame_number, payload=payload_data, crc=crc)
 
         return cls(lich_chunk=lich_chunk, payload=payload)
 
     @classmethod
     def from_bytes_legacy(cls, data: bytes) -> StreamFrame:
-        """
-        Parse stream frame from legacy format (18 bytes without CRC).
+        """Parse stream frame from legacy format (18 bytes without CRC).
 
         Args:
+        ----
             data: 18 bytes of frame data.
 
         Returns:
+        -------
             Parsed StreamFrame.
         """
         if len(data) != 18:

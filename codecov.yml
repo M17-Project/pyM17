@@ -1,0 +1,52 @@
+# Codecov configuration for pyM17
+# https://docs.codecov.com/docs/codecovyml-reference
+
+coverage:
+  precision: 2
+  round: down
+  range: "40...100"
+
+  status:
+    project:
+      default:
+        target: auto
+        threshold: 1%
+        informational: false
+    patch:
+      default:
+        target: 80%
+        threshold: 5%
+        informational: true
+
+parsers:
+  gcov:
+    branch_detection:
+      conditional: yes
+      loop: yes
+      method: no
+      macro: no
+
+comment:
+  layout: "reach,diff,flags,files"
+  behavior: default
+  require_changes: true
+  require_base: false
+  require_head: true
+
+ignore:
+  - "tests/**/*"
+  - "**/__pycache__/**"
+  - "**/.*"
+  - "m17/apps.py"           # CLI application code
+  - "m17/audio_test.py"     # Manual testing script
+  - "m17/blocks.py"         # Legacy audio blocks
+  - "m17/network.py"        # Deprecated legacy module
+  - "m17/frames.py"         # Deprecated legacy module
+  - "m17/voipsim.py"        # Deprecated legacy module
+  - "m17/sanity_check.py"   # Deprecated legacy module
+
+flags:
+  unittests:
+    paths:
+      - m17/
+    carryforward: true

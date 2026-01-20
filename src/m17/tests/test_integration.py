@@ -1,5 +1,4 @@
-"""
-Integration Tests for M17 Protocol Stack
+"""Integration Tests for M17 Protocol Stack
 
 Tests the full FEC encode/decode pipeline and frame roundtrips.
 """
@@ -7,26 +6,22 @@ Tests the full FEC encode/decode pipeline and frame roundtrips.
 import pytest
 
 from m17.codec.convolutional import conv_encode, conv_encode_lsf, conv_encode_stream
+from m17.codec.golay import decode_lich, encode_lich, golay24_decode, golay24_encode
+from m17.codec.interleave import deinterleave, interleave
 from m17.codec.puncture import (
+    PUNCTURE_P2,
     puncture,
-    depuncture,
     puncture_lsf,
     puncture_stream,
-    PUNCTURE_P1,
-    PUNCTURE_P2,
 )
-from m17.codec.interleave import interleave, deinterleave
-from m17.codec.randomize import randomize, derandomize
-from m17.codec.viterbi import viterbi_decode, viterbi_decode_punctured, decode_lsf, decode_stream
-from m17.codec.golay import golay24_encode, golay24_decode, encode_lich, decode_lich
-
-from m17.frames.lsf import LinkSetupFrame
-from m17.frames.stream import M17Payload, StreamFrame
-from m17.frames.lich import LICHFrame, LICHCollector
-from m17.frames.ip import IPFrame
-
+from m17.codec.randomize import derandomize, randomize
+from m17.codec.viterbi import decode_lsf, decode_stream, viterbi_decode, viterbi_decode_punctured
 from m17.core.address import Address
 from m17.core.crc import crc_m17, verify_crc
+from m17.frames.ip import IPFrame
+from m17.frames.lich import LICHCollector, LICHFrame
+from m17.frames.lsf import LinkSetupFrame
+from m17.frames.stream import M17Payload, StreamFrame
 
 
 class TestFECPipelineRoundtrip:

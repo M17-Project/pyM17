@@ -1,5 +1,4 @@
-"""
-M17 Peer-to-Peer Direct Connections
+"""M17 Peer-to-Peer Direct Connections
 
 Implements direct P2P connections between M17 nodes with NAT traversal.
 
@@ -16,9 +15,10 @@ import json
 import logging
 import socket
 import time
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from enum import IntEnum
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Any, Optional
 
 from m17.core.address import Address
 from m17.core.constants import DEFAULT_PORT
@@ -47,17 +47,17 @@ class MessageType(IntEnum):
 
 @dataclass
 class P2PConnection:
-    """
-    Represents a P2P connection to another M17 node.
+    """Represents a P2P connection to another M17 node.
 
-    Attributes:
+    Attributes
+    ----------
         callsign: Remote callsign.
         addr: Remote (host, port) tuple.
         last_seen: Timestamp of last activity.
     """
 
     callsign: str
-    addr: Tuple[str, int]
+    addr: tuple[str, int]
     last_seen: float = field(default_factory=time.time)
 
     def is_active(self, timeout: float = 30.0) -> bool:
@@ -71,32 +71,30 @@ class P2PConnection:
 
 @dataclass
 class P2PManager:
-    """
-    Manages P2P connections to other M17 nodes.
+    """Manages P2P connections to other M17 nodes.
 
     Handles NAT traversal through UDP hole punching and
     maintains connection state.
 
-    Attributes:
+    Attributes
+    ----------
         callsign: Local callsign.
         primaries: List of rendezvous server addresses (required).
         port: Local port.
     """
 
     callsign: str
-    primaries: List[Tuple[str, int]]
+    primaries: list[tuple[str, int]]
     port: int = DEFAULT_PORT
 
     _sock: Optional[socket.socket] = field(default=None, init=False)
-    _connections: Dict[str, P2PConnection] = field(default_factory=dict, init=False)
-    _whereis: Dict[str, Tuple[float, Tuple[str, int]]] = field(
-        default_factory=dict, init=False
-    )
+    _connections: dict[str, P2PConnection] = field(default_factory=dict, init=False)
+    _whereis: dict[str, tuple[float, tuple[str, int]]] = field(default_factory=dict, init=False)
     _running: bool = field(default=False, init=False)
     _last_registration: float = field(default=0.0, init=False)
     _registration_interval: float = 25.0
     _connection_timeout: float = 25.0
-    _frame_callback: Optional[Callable[[IPFrame, Tuple[str, int]], None]] = field(
+    _frame_callback: Optional[Callable[[IPFrame, tuple[str, int]], None]] = field(
         default=None, init=False
     )
 
@@ -129,19 +127,17 @@ class P2PManager:
         self._connections.clear()
         logger.info("P2P manager stopped")
 
-    def set_frame_callback(
-        self, callback: Callable[[IPFrame, Tuple[str, int]], None]
-    ) -> None:
+    def set_frame_callback(self, callback: Callable[[IPFrame, tuple[str, int]], None]) -> None:
         """Set callback for received M17 frames."""
         self._frame_callback = callback
 
-    def _send(self, data: bytes, addr: Tuple[str, int]) -> None:
+    def _send(self, data: bytes, addr: tuple[str, int]) -> None:
         """Send data to address."""
         if self._sock:
             self._sock.sendto(data, addr)
             logger.debug(f"SEND to {addr}: {len(data)} bytes")
 
-    def _send_json(self, msg: Dict[str, Any], addr: Tuple[str, int]) -> None:
+    def _send_json(self, msg: dict[str, Any], addr: tuple[str, int]) -> None:
         """Send JSON message to address."""
         payload = b"M17J" + json.dumps(msg).encode("utf-8")
         self._send(payload, addr)
@@ -153,14 +149,15 @@ class P2PManager:
             self._send_json(msg, primary)
         self._last_registration = time.time()
 
-    async def lookup(self, callsign: str) -> Optional[Tuple[str, int]]:
-        """
-        Look up a callsign location.
+    async def lookup(self, callsign: str) -> Optional[tuple[str, int]]:
+        """Look up a callsign location.
 
         Args:
+        ----
             callsign: Callsign to look up.
 
         Returns:
+        -------
             (host, port) if found, None otherwise.
         """
         # Check cache first
@@ -177,12 +174,12 @@ class P2PManager:
         return None
 
     async def request_introduction(self, target_callsign: str) -> None:
-        """
-        Request introduction to another node.
+        """Request introduction to another node.
 
         Asks rendezvous servers to introduce us to the target.
 
         Args:
+        ----
             target_callsign: Callsign to connect to.
         """
         msg = {"msgtype": MessageType.INTRODUCE_ME, "callsign": target_callsign}
@@ -191,16 +188,17 @@ class P2PManager:
         logger.info(f"Requested introduction to {target_callsign}")
 
     async def connect(self, callsign: str, timeout: float = 3.0) -> bool:
-        """
-        Establish P2P connection to a callsign.
+        """Establish P2P connection to a callsign.
 
         Uses NAT hole punching via rendezvous servers.
 
         Args:
+        ----
             callsign: Target callsign.
             timeout: Connection timeout.
 
         Returns:
+        -------
             True if connection established.
         """
         await self.request_introduction(callsign)
@@ -225,14 +223,15 @@ class P2PManager:
         return False
 
     async def send_frame(self, frame: IPFrame, callsign: str) -> bool:
-        """
-        Send a frame to a callsign.
+        """Send a frame to a callsign.
 
         Args:
+        ----
             frame: IPFrame to send.
             callsign: Target callsign.
 
         Returns:
+        -------
             True if sent successfully.
         """
         if not self.has_connection(callsign):
@@ -243,9 +242,7 @@ class P2PManager:
         self._send(bytes(frame), conn.addr)
         return True
 
-    def _handle_json_message(
-        self, msg: Dict[str, Any], addr: Tuple[str, int]
-    ) -> None:
+    def _handle_json_message(self, msg: dict[str, Any], addr: tuple[str, int]) -> None:
         """Handle received JSON message."""
         msg_type = msg.get("msgtype")
 
@@ -287,7 +284,7 @@ class P2PManager:
                 self._store_location(callsign, addr)
                 logger.info(f"P2P connection established with {callsign}")
 
-    def _store_location(self, callsign: str, addr: Tuple[str, int]) -> None:
+    def _store_location(self, callsign: str, addr: tuple[str, int]) -> None:
         """Store callsign -> location mapping."""
         self._whereis[callsign] = (time.time(), addr)
         self._whereis[addr] = (time.time(), callsign)

@@ -1,5 +1,4 @@
-"""
-M17 High-Level Network Client
+"""M17 High-Level Network Client
 
 Provides a unified async interface for M17 networking,
 combining reflector, DHT, and P2P capabilities.
@@ -7,16 +6,15 @@ combining reflector, DHT, and P2P capabilities.
 
 from __future__ import annotations
 
-import asyncio
 import logging
 import random
-from dataclasses import dataclass, field
-from typing import AsyncGenerator, Callable, Optional, Union
+from collections.abc import AsyncGenerator, Callable
+from dataclasses import dataclass
+from typing import Optional
 
 from m17.core.address import Address
 from m17.frames.ip import IPFrame
 from m17.frames.lsf import LinkSetupFrame
-from m17.frames.stream import M17Payload
 
 __all__ = [
     "M17NetworkClient",
@@ -28,10 +26,10 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class M17ClientConfig:
-    """
-    M17 client configuration.
+    """M17 client configuration.
 
-    Attributes:
+    Attributes
+    ----------
         callsign: Local callsign.
         reflector_host: Default reflector host.
         reflector_port: Default reflector port.
@@ -53,8 +51,7 @@ class M17ClientConfig:
 
 
 class M17NetworkClient:
-    """
-    High-level M17 network client.
+    """High-level M17 network client.
 
     Provides a unified interface for:
     - Connecting to reflectors
@@ -62,6 +59,7 @@ class M17NetworkClient:
     - Stream management
 
     Example:
+    -------
         config = M17ClientConfig(
             callsign="N0CALL",
             reflector_host="m17-usa.example.com"
@@ -77,10 +75,10 @@ class M17NetworkClient:
     """
 
     def __init__(self, config: M17ClientConfig) -> None:
-        """
-        Initialize client.
+        """Initialize client.
 
         Args:
+        ----
             config: Client configuration.
         """
         self.config = config
@@ -108,6 +106,7 @@ class M17NetworkClient:
         """Check if connected to any network."""
         if self._reflector:
             from m17.net.reflector import M17ReflectorClient
+
             if isinstance(self._reflector, M17ReflectorClient):
                 return self._reflector.is_connected
         return False
@@ -118,15 +117,16 @@ class M17NetworkClient:
         port: Optional[int] = None,
         module: Optional[str] = None,
     ) -> bool:
-        """
-        Connect to reflector.
+        """Connect to reflector.
 
         Args:
+        ----
             host: Reflector host (uses config default if not specified).
             port: Reflector port.
             module: Reflector module.
 
         Returns:
+        -------
             True if connected successfully.
         """
         from m17.net.reflector import M17ReflectorClient
@@ -166,39 +166,39 @@ class M17NetworkClient:
         logger.info("Disconnected")
 
     def add_frame_handler(self, handler: Callable[[IPFrame], None]) -> None:
-        """
-        Add a frame handler.
+        """Add a frame handler.
 
         Args:
+        ----
             handler: Function to call with received frames.
         """
         self._frame_handlers.append(handler)
 
     def remove_frame_handler(self, handler: Callable[[IPFrame], None]) -> None:
-        """
-        Remove a frame handler.
+        """Remove a frame handler.
 
         Args:
+        ----
             handler: Handler to remove.
         """
         if handler in self._frame_handlers:
             self._frame_handlers.remove(handler)
 
     async def send_frame(self, frame: IPFrame) -> None:
-        """
-        Send an M17 frame.
+        """Send an M17 frame.
 
         Args:
+        ----
             frame: Frame to send.
         """
         if self._reflector and self._reflector.is_connected:
             await self._reflector.send_frame(frame)
 
     async def receive_frames(self) -> AsyncGenerator[IPFrame, None]:
-        """
-        Async generator for received frames.
+        """Async generator for received frames.
 
-        Yields:
+        Yields
+        ------
             Received IPFrame objects.
         """
         if not self._reflector:
@@ -220,18 +220,20 @@ class M17NetworkClient:
         stream_type: int = 0x0005,
         nonce: Optional[bytes] = None,
     ) -> StreamContext:
-        """
-        Create a stream context for sending.
+        """Create a stream context for sending.
 
         Args:
+        ----
             destination: Destination callsign.
             stream_type: TYPE field value.
             nonce: Optional META/nonce field.
 
         Returns:
+        -------
             StreamContext for sending frames.
 
         Example:
+        -------
             async with client.stream("W2FBI") as stream:
                 await stream.send(payload_bytes)
         """
@@ -245,8 +247,7 @@ class M17NetworkClient:
 
 
 class StreamContext:
-    """
-    Context manager for M17 stream transmission.
+    """Context manager for M17 stream transmission.
 
     Manages stream ID, frame numbering, and EOT signaling.
     """
@@ -296,10 +297,10 @@ class StreamContext:
         return self._frame_number
 
     async def send(self, payload: bytes, is_last: bool = False) -> None:
-        """
-        Send a payload frame.
+        """Send a payload frame.
 
         Args:
+        ----
             payload: 16-byte payload data.
             is_last: True if this is the last frame.
         """

@@ -1,5 +1,4 @@
-"""
-M17 Address Encoding/Decoding
+"""M17 Address Encoding/Decoding
 
 Handles Base-40 callsign encoding per M17 specification v2.0.3.
 
@@ -33,12 +32,12 @@ __all__ = ["Address", "encode_callsign", "decode_callsign"]
 
 @dataclass(frozen=True, slots=True)
 class Address:
-    """
-    M17 Address representation.
+    """M17 Address representation.
 
     Can be instantiated with either a numeric address or a callsign string.
 
-    Examples:
+    Examples
+    --------
         >>> addr = Address(callsign="W2FBI")
         >>> addr.callsign
         'W2FBI'
@@ -63,15 +62,16 @@ class Address:
         callsign: Union[str, None] = None,
         numeric: Union[int, None] = None,
     ) -> None:
-        """
-        Create an Address from either numeric value or callsign.
+        """Create an Address from either numeric value or callsign.
 
         Args:
+        ----
             addr: Numeric address as int or 6-byte big-endian bytes (legacy).
             callsign: Callsign string to encode.
             numeric: Numeric address as int (preferred over addr).
 
         Raises:
+        ------
             ValueError: If neither or both addr/callsign provided, or invalid values.
         """
         # Handle the numeric parameter
@@ -173,26 +173,28 @@ class Address:
     # Legacy static methods for backward compatibility
     @staticmethod
     def encode(callsign: str) -> bytes:
-        """
-        Encode a callsign to 6-byte address (legacy method).
+        """Encode a callsign to 6-byte address (legacy method).
 
         Args:
+        ----
             callsign: Callsign string.
 
         Returns:
+        -------
             6-byte big-endian address.
         """
         return encode_callsign(callsign).to_bytes(6, "big")
 
     @staticmethod
     def decode(addr: Union[int, bytes]) -> str:
-        """
-        Decode an address to callsign string (legacy method).
+        """Decode an address to callsign string (legacy method).
 
         Args:
+        ----
             addr: Numeric address or 6-byte bytes.
 
         Returns:
+        -------
             Callsign string.
         """
         if isinstance(addr, bytes):
@@ -201,8 +203,7 @@ class Address:
 
 
 def encode_callsign(callsign: str) -> int:
-    """
-    Encode a callsign string to numeric address.
+    """Encode a callsign string to numeric address.
 
     Supports:
     - Regular callsigns (A-Z, 0-9, space, -, /, .)
@@ -210,15 +211,19 @@ def encode_callsign(callsign: str) -> int:
     - Hash-prefixed callsigns (#SOMETHING)
 
     Args:
+    ----
         callsign: Callsign string (max 9 chars for regular, 8 for hash-prefixed).
 
     Returns:
+    -------
         48-bit numeric address.
 
     Raises:
+    ------
         ValueError: If callsign is invalid or too long.
 
     Examples:
+    --------
         >>> hex(encode_callsign("W2FBI"))
         '0x161ae1f'
         >>> encode_callsign("@ALL") == 0xFFFFFFFFFFFF
@@ -242,8 +247,8 @@ def encode_callsign(callsign: str) -> int:
     for char in reversed(callsign):
         try:
             char_idx = CALLSIGN_ALPHABET.index(char)
-        except ValueError:
-            raise ValueError(f"Invalid character in callsign: {char!r}")
+        except ValueError as err:
+            raise ValueError(f"Invalid character in callsign: {char!r}") from err
         num = num * 40 + char_idx
 
     if num > MAX_CALLSIGN_VALUE:
@@ -253,16 +258,17 @@ def encode_callsign(callsign: str) -> int:
 
 
 def _encode_hash_callsign(callsign: str) -> int:
-    """
-    Encode a hash-prefixed callsign (without the # prefix).
+    """Encode a hash-prefixed callsign (without the # prefix).
 
     Hash-prefixed addresses use a reduced range for the callsign
     portion (max 8 chars) offset by 40^9.
 
     Args:
+    ----
         callsign: Callsign without the # prefix.
 
     Returns:
+    -------
         Numeric address in hash-address range.
     """
     if len(callsign) > 8:
@@ -272,27 +278,30 @@ def _encode_hash_callsign(callsign: str) -> int:
     for char in reversed(callsign):
         try:
             char_idx = CALLSIGN_ALPHABET.index(char)
-        except ValueError:
-            raise ValueError(f"Invalid character in callsign: {char!r}")
+        except ValueError as err:
+            raise ValueError(f"Invalid character in callsign: {char!r}") from err
         num = num * 40 + char_idx
 
     return HASH_ADDRESS_MIN + num
 
 
 def decode_callsign(addr: int) -> str:
-    """
-    Decode a numeric address to callsign string.
+    """Decode a numeric address to callsign string.
 
     Args:
+    ----
         addr: 48-bit numeric address.
 
     Returns:
+    -------
         Callsign string.
 
     Raises:
+    ------
         ValueError: If address is invalid.
 
     Examples:
+    --------
         >>> decode_callsign(0x161ae1f)
         'W2FBI'
         >>> decode_callsign(0xFFFFFFFFFFFF)
@@ -314,13 +323,14 @@ def decode_callsign(addr: int) -> str:
 
 
 def _decode_base40(num: int) -> str:
-    """
-    Decode a base-40 encoded number to string.
+    """Decode a base-40 encoded number to string.
 
     Args:
+    ----
         num: Base-40 encoded number.
 
     Returns:
+    -------
         Decoded string.
     """
     if num == 0:

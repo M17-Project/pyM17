@@ -55,6 +55,7 @@ aioresponses = "^0.7.6"
 pytest-dotenv = "^0.5.2"
 pylint = "^3.3.2"
 ruff = "^0.1.0"
+pre-commit = "^3.6.0"
 
 [[tool.poetry.source]]
 name = "PyPI"
@@ -107,7 +108,48 @@ target-version = "py312"
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "N", "D", "UP", "B", "C4"]
-ignore = ["D100", "D104", "D107"]
+ignore = [
+    "D100",  # Missing docstring in public module
+    "D102",  # Missing docstring in public method
+    "D104",  # Missing docstring in public package
+    "D107",  # Missing docstring in __init__
+    "D103",  # Missing docstring in public function
+    "D105",  # Missing docstring in magic method
+    "D200",  # One-line docstring should fit on one line
+    "D203",  # One blank line before class (conflicts with D211)
+    "D205",  # 1 blank line required between summary/description
+    "D213",  # Multi-line summary second line (conflicts with D212)
+    "D400",  # First line should end with a period
+    "D401",  # First line should be in imperative mood
+    "D413",  # Missing blank line after last section
+    "D415",  # First line should end with punctuation
+    "UP007", # Use X | Y for type union (keep Union for backwards compat)
+    "UP031", # Use format specifiers instead of percent format
+    "E501",  # Line too long (handled by formatter)
+    "E721",  # Do not compare types, use isinstance()
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Package __init__.py files - intentional re-exports and delayed imports
+"m17/__init__.py" = ["F401", "E402"]
+"m17/*/__init__.py" = ["F401", "E402"]
+# Frames package - delayed imports for deprecation warnings
+"m17/frames/packet.py" = ["E402"]
+# Legacy deprecated modules - will be removed in v1.0, minimal linting
+"m17/address.py" = ["D", "F401", "N"]
+"m17/frames.py" = ["D", "F401", "N", "B", "C4"]
+"m17/framer.py" = ["D", "F401", "N"]
+"m17/network.py" = ["D", "F401", "F841", "N", "B"]
+"m17/voipsim.py" = ["D", "F401", "N"]
+"m17/sanity_check.py" = ["D", "F401", "N"]
+"m17/const.py" = ["D", "F401", "N"]
+"m17/crc.py" = ["D", "F401", "N"]
+"m17/misc.py" = ["D", "N"]
+# Experimental/work-in-progress modules
+"m17/blocks.py" = ["D", "F841"]
+"m17/audio_test.py" = ["D", "F841"]
+# Test files - relaxed requirements
+"tests/*" = ["D", "N", "F401", "F841", "B007"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

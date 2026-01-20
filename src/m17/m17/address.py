@@ -1,5 +1,4 @@
-"""
-M17 Addressing (Legacy Module)
+"""M17 Addressing (Legacy Module)
 
 .. deprecated:: 0.1.1
     This module is deprecated. Use :mod:`m17.core.address` instead.
@@ -14,19 +13,18 @@ M17 Addressing (Legacy Module)
 """
 from __future__ import annotations
 
-import sys
 import struct
+import sys
 import warnings
 from typing import Any, Optional, Union
 
-
 from m17.const import CALLSIGN_ALPHABET, M17_ADDRESS_LAYOUT_STRUCT
+
 M17AddressLayout = struct.Struct(M17_ADDRESS_LAYOUT_STRUCT)
 
 # Emit deprecation warning on module import
 warnings.warn(
-    "m17.address is deprecated and will be removed in v1.0. "
-    "Use m17.core.address instead.",
+    "m17.address is deprecated and will be removed in v1.0. " "Use m17.core.address instead.",
     DeprecationWarning,
     stacklevel=2,
 )
@@ -36,8 +34,7 @@ AddressParam = Union[int, bytes]
 
 
 class Address:
-    """
-    Call with either "addr" or "callsign" to instantiate, e.g.
+    """Call with either "addr" or "callsign" to instantiate, e.g.
 
     >>> from m17.address import Address
     >>> Address(callsign="W2FBI").addr
@@ -71,9 +68,7 @@ class Address:
     """
 
     def __init__(
-        self,
-        addr: Optional[Union[bytes, int]] = None,
-        callsign: Optional[str] = None
+        self, addr: Optional[Union[bytes, int]] = None, callsign: Optional[str] = None
     ) -> None:
         if addr is None and callsign is None:
             raise ValueError("Must provide either addr or callsign")
@@ -98,7 +93,11 @@ class Address:
 
     def __eq__(self, compareto: object) -> bool:
         if isinstance(compareto, str):
-            return int(compareto) == int.from_bytes(self.addr, "big") if compareto.isdigit() else compareto.upper() == self.callsign
+            return (
+                int(compareto) == int.from_bytes(self.addr, "big")
+                if compareto.isdigit()
+                else compareto.upper() == self.callsign
+            )
 
         if isinstance(compareto, int):
             return compareto == int(self)
@@ -110,9 +109,7 @@ class Address:
 
     @staticmethod
     def to_dmr_id(something: Any) -> None:
-        """
-        Convert a callsign to a DMR ID
-        """
+        """Convert a callsign to a DMR ID"""
         # if no db:
         # url = "https://database.radioid.net/static/users.json"
         # requests.get()
@@ -123,62 +120,48 @@ class Address:
 
     @staticmethod
     def from_dmr_id(dmr_int: int) -> None:
-        """
-        Convert a DMR ID to a callsign
-        """
+        """Convert a DMR ID to a callsign"""
         # return an Address encoded for callsign using dmr database lookup to get callsign
         ...
 
     def is_dmr_id(self) -> bool:
-        """
-        Is this a DMR ID?
-        """
+        """Is this a DMR ID?"""
         return self.callsign.startswith("D") and self.callsign[1:].isdigit()
 
     def is_dmr_talkgroup(self) -> bool:
-        """
-        Is this a DMR talkgroup?
-        """
+        """Is this a DMR talkgroup?"""
         return self.is_brandmeister_tg()
 
     def is_brandmeister_tg(self) -> bool:
-        """
-        Is this a Brandmeister talkgroup?
-        """
+        """Is this a Brandmeister talkgroup?"""
         return self.callsign.startswith("BM") and self.callsign[1:].isdigit()
 
     def is_dstar_reflector(self) -> bool:
-        """
-        Is this a D-Star reflector?
-        """
+        """Is this a D-Star reflector?"""
         return self.callsign.startswith("REF")
 
     @staticmethod
     def encode(callsign: str) -> bytes:
-        """
-        Encode a callsign into an address
-        """
+        """Encode a callsign into an address"""
         num = 0
         for char in callsign.upper()[::-1]:
             charidx = CALLSIGN_ALPHABET.index(char)
             num *= 40
             num += charidx
-            if num >= 40 ** 9:
+            if num >= 40**9:
                 raise ValueError("Invalid callsign")
         return num.to_bytes(6, "big")
 
     @staticmethod
     def decode(addr: AddressParam) -> str:
-        """
-        Decode an address into a callsign
-        """
+        """Decode an address into a callsign"""
         num: int
         if isinstance(addr, bytes):
             num = int.from_bytes(addr, "big")
         else:
             num = addr
 
-        if num >= 40 ** 9:
+        if num >= 40**9:
             raise ValueError("Invalid address")
         chars = []
         while num > 0:
@@ -192,12 +175,12 @@ class Address:
 
 
 def show_help() -> None:
-    """
-    Show help
-    """
-    print("""
+    """Show help"""
+    print(
+        """
 Provide callsigns on the command line and they will be translated into M17 addresses
-    """)
+    """
+    )
 
 
 if __name__ == "__main__":

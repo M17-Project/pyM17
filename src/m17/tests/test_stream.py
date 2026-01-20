@@ -1,5 +1,4 @@
-"""
-Tests for M17 Stream Frame Definitions
+"""Tests for M17 Stream Frame Definitions
 
 Tests for M17Payload and StreamFrame classes.
 """
@@ -7,7 +6,6 @@ Tests for M17Payload and StreamFrame classes.
 import pytest
 
 from m17.frames.stream import M17Payload, StreamFrame
-from m17.core.crc import crc_m17
 
 
 class TestM17Payload:

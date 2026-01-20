@@ -1,5 +1,4 @@
-"""
-M17 TYPE Field Definitions
+"""M17 TYPE Field Definitions
 
 Supports both M17 v2.0.3 and v3.0.0 TYPE field formats.
 
@@ -25,7 +24,7 @@ v2.0.3 TYPE Field (16 bits) - Legacy:
 from __future__ import annotations
 
 from enum import IntEnum, IntFlag
-from typing import NamedTuple, Optional
+from typing import NamedTuple
 
 __all__ = [
     # Version enum
@@ -77,8 +76,7 @@ class M17Version(IntEnum):
 
 
 class M17Payload(IntEnum):
-    """
-    M17 v3.0.0 PAYLOAD field (bits 7-4 of byte 0).
+    """M17 v3.0.0 PAYLOAD field (bits 7-4 of byte 0).
 
     Specifies the payload/codec type.
     """
@@ -92,8 +90,7 @@ class M17Payload(IntEnum):
 
 
 class M17Encryption(IntEnum):
-    """
-    M17 v3.0.0 ENCRYPTION field (bits 3-1 of byte 0).
+    """M17 v3.0.0 ENCRYPTION field (bits 3-1 of byte 0).
 
     Specifies the encryption method.
     """
@@ -109,8 +106,7 @@ class M17Encryption(IntEnum):
 
 
 class M17Meta(IntEnum):
-    """
-    M17 v3.0.0 META field type (bits 15-12 / bits 7-4 of byte 1).
+    """M17 v3.0.0 META field type (bits 15-12 / bits 7-4 of byte 1).
 
     Specifies what the META field contains.
     """
@@ -124,10 +120,10 @@ class M17Meta(IntEnum):
 
 
 class TypeFieldV3(NamedTuple):
-    """
-    Parsed M17 v3.0.0 TYPE field components.
+    """Parsed M17 v3.0.0 TYPE field components.
 
-    Attributes:
+    Attributes
+    ----------
         payload: Payload/codec type (4 bits)
         encryption: Encryption method (3 bits)
         signed: Digital signature flag (1 bit)
@@ -143,16 +139,18 @@ class TypeFieldV3(NamedTuple):
 
 
 def parse_type_field_v3(type_value: int) -> TypeFieldV3:
-    """
-    Parse a 16-bit TYPE field value into v3.0.0 components.
+    """Parse a 16-bit TYPE field value into v3.0.0 components.
 
     Args:
+    ----
         type_value: 16-bit TYPE field value.
 
     Returns:
+    -------
         TypeFieldV3 with parsed components.
 
     Examples:
+    --------
         >>> tf = parse_type_field_v3(0x1020)  # Voice 3200, no encryption, GNSS meta
         >>> tf.payload == M17Payload.VOICE_3200
         True
@@ -198,10 +196,10 @@ def build_type_field_v3(
     meta: M17Meta = M17Meta.NONE,
     can: int = 0,
 ) -> int:
-    """
-    Build a 16-bit TYPE field from v3.0.0 components.
+    """Build a 16-bit TYPE field from v3.0.0 components.
 
     Args:
+    ----
         payload: Payload/codec type.
         encryption: Encryption method.
         signed: Digital signature flag (stream mode only).
@@ -209,13 +207,16 @@ def build_type_field_v3(
         can: Channel Access Number (0-15).
 
     Returns:
+    -------
         16-bit TYPE field value.
 
     Raises:
+    ------
         ValueError: If CAN is out of range.
         ValueError: If packet mode has encryption or signing enabled.
 
     Examples:
+    --------
         >>> hex(build_type_field_v3(M17Payload.VOICE_3200, M17Encryption.NONE))
         '0x20'
     """
@@ -245,8 +246,7 @@ def build_type_field_v3(
 
 
 class M17Type(IntFlag):
-    """
-    M17 v2.0.3 stream/packet type indicator (bit 0).
+    """M17 v2.0.3 stream/packet type indicator (bit 0).
 
     DEPRECATED: Use M17Payload for v3.0.0.
     """
@@ -256,8 +256,7 @@ class M17Type(IntFlag):
 
 
 class M17DataType(IntEnum):
-    """
-    M17 v2.0.3 data type field (bits 1-2).
+    """M17 v2.0.3 data type field (bits 1-2).
 
     DEPRECATED: Use M17Payload for v3.0.0.
     """
@@ -269,8 +268,7 @@ class M17DataType(IntEnum):
 
 
 class M17EncryptionType(IntEnum):
-    """
-    M17 v2.0.3 encryption type field (bits 3-4).
+    """M17 v2.0.3 encryption type field (bits 3-4).
 
     DEPRECATED: Use M17Encryption for v3.0.0.
     """
@@ -282,8 +280,7 @@ class M17EncryptionType(IntEnum):
 
 
 class M17EncryptionSubtype(IntEnum):
-    """
-    M17 v2.0.3 encryption subtype field (bits 5-6).
+    """M17 v2.0.3 encryption subtype field (bits 5-6).
 
     DEPRECATED: Use M17Meta for v3.0.0.
     """
@@ -295,8 +292,7 @@ class M17EncryptionSubtype(IntEnum):
 
 
 class M17MetaType(IntEnum):
-    """
-    M17 v2.0.3 META field interpretation.
+    """M17 v2.0.3 META field interpretation.
 
     DEPRECATED: Use M17Meta for v3.0.0.
     """
@@ -329,8 +325,7 @@ class ChannelAccessNumber(IntEnum):
 
 
 class TypeField(NamedTuple):
-    """
-    Parsed M17 v2.0.3 TYPE field components.
+    """Parsed M17 v2.0.3 TYPE field components.
 
     DEPRECATED: Use TypeFieldV3 for v3.0.0.
     """
@@ -344,18 +339,20 @@ class TypeField(NamedTuple):
 
 
 def parse_type_field(type_value: int) -> TypeField:
-    """
-    Parse a 16-bit TYPE field value into v2.0.3 components.
+    """Parse a 16-bit TYPE field value into v2.0.3 components.
 
     DEPRECATED: Use parse_type_field_v3() for v3.0.0.
 
     Args:
+    ----
         type_value: 16-bit TYPE field value.
 
     Returns:
+    -------
         TypeField with parsed components.
 
     Examples:
+    --------
         >>> tf = parse_type_field(0x0005)  # Voice stream
         >>> tf.stream_type == M17Type.STREAM
         True
@@ -380,12 +377,12 @@ def build_type_field(
     can: int = 0,
     reserved: int = 0,
 ) -> int:
-    """
-    Build a 16-bit TYPE field from v2.0.3 components.
+    """Build a 16-bit TYPE field from v2.0.3 components.
 
     DEPRECATED: Use build_type_field_v3() for v3.0.0.
 
     Args:
+    ----
         stream_type: Packet or stream mode.
         data_type: Data, voice, or voice+data.
         encryption_type: Encryption method.
@@ -394,9 +391,11 @@ def build_type_field(
         reserved: Reserved bits (should be 0).
 
     Returns:
+    -------
         16-bit TYPE field value.
 
     Examples:
+    --------
         >>> hex(build_type_field(M17Type.STREAM, M17DataType.VOICE))
         '0x5'
         >>> hex(build_type_field(M17Type.STREAM, M17DataType.VOICE_DATA))
@@ -423,20 +422,22 @@ def build_type_field(
 
 
 def detect_type_field_version(type_value: int) -> M17Version:
-    """
-    Detect whether a TYPE field is v2.0.3 or v3.0.0 format.
+    """Detect whether a TYPE field is v2.0.3 or v3.0.0 format.
 
     The PAYLOAD field (bits 7-4 of byte 0) is used for detection:
     - If PAYLOAD == 0x0, it's a v2.0.3 frame (v2 always had these bits as 0)
     - If PAYLOAD != 0x0, it's a v3.0.0 frame
 
     Args:
+    ----
         type_value: 16-bit TYPE field value.
 
     Returns:
+    -------
         M17Version.V2 or M17Version.V3
 
     Examples:
+    --------
         >>> detect_type_field_version(0x0005)  # v2.0.3 voice stream
         M17Version.V2
         >>> detect_type_field_version(0x0020)  # v3.0.0 voice 3200

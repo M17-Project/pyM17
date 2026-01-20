@@ -1,5 +1,4 @@
-"""
-M17 Golay(24,12) Codec
+"""M17 Golay(24,12) Codec
 
 The Golay(24,12) code is used to protect the LICH chunks in M17.
 Each 12-bit data word is encoded to a 24-bit codeword with 12 parity bits.
@@ -10,8 +9,6 @@ Port from libm17/math/golay.c
 """
 
 from __future__ import annotations
-
-from typing import List, Optional, Tuple
 
 __all__ = [
     "golay24_encode",
@@ -24,29 +21,51 @@ __all__ = [
 ]
 
 # Precomputed encoding matrix for Golay(24,12)
-ENCODE_MATRIX: Tuple[int, ...] = (
-    0x8EB, 0x93E, 0xA97, 0xDC6, 0x367, 0x6CD,
-    0xD99, 0x3DA, 0x7B4, 0xF68, 0x63B, 0xC75,
+ENCODE_MATRIX: tuple[int, ...] = (
+    0x8EB,
+    0x93E,
+    0xA97,
+    0xDC6,
+    0x367,
+    0x6CD,
+    0xD99,
+    0x3DA,
+    0x7B4,
+    0xF68,
+    0x63B,
+    0xC75,
 )
 
 # Precomputed decoding matrix for Golay(24,12)
-DECODE_MATRIX: Tuple[int, ...] = (
-    0xC75, 0x49F, 0x93E, 0x6E3, 0xDC6, 0xF13,
-    0xAB9, 0x1ED, 0x3DA, 0x7B4, 0xF68, 0xA4F,
+DECODE_MATRIX: tuple[int, ...] = (
+    0xC75,
+    0x49F,
+    0x93E,
+    0x6E3,
+    0xDC6,
+    0xF13,
+    0xAB9,
+    0x1ED,
+    0x3DA,
+    0x7B4,
+    0xF68,
+    0xA4F,
 )
 
 
 def golay24_encode(data: int) -> int:
-    """
-    Encode a 12-bit value with Golay(24,12).
+    """Encode a 12-bit value with Golay(24,12).
 
     Args:
+    ----
         data: 12-bit input value (right justified).
 
     Returns:
+    -------
         24-bit Golay codeword (data in upper 12 bits, parity in lower 12).
 
     Examples:
+    --------
         >>> hex(golay24_encode(0x123))
         '0x123e7e'
     """
@@ -69,13 +88,14 @@ def _popcount(n: int) -> int:
 
 
 def _calc_syndrome(data: int) -> int:
-    """
-    Calculate syndrome for a 12-bit data word.
+    """Calculate syndrome for a 12-bit data word.
 
     Args:
+    ----
         data: 12-bit data value.
 
     Returns:
+    -------
         12-bit syndrome.
     """
     checksum = 0
@@ -85,18 +105,20 @@ def _calc_syndrome(data: int) -> int:
     return checksum
 
 
-def golay24_decode(codeword: int) -> Tuple[int, int]:
-    """
-    Decode a 24-bit Golay codeword (hard decision).
+def golay24_decode(codeword: int) -> tuple[int, int]:
+    """Decode a 24-bit Golay codeword (hard decision).
 
     Args:
+    ----
         codeword: 24-bit Golay codeword.
 
     Returns:
+    -------
         Tuple of (decoded 12-bit data, number of errors corrected).
         Returns (0xFFFF, -1) if uncorrectable.
 
     Examples:
+    --------
         >>> golay24_decode(golay24_encode(0x123))
         (291, 0)
     """
@@ -156,14 +178,15 @@ def golay24_decode(codeword: int) -> Tuple[int, int]:
     return 0xFFFF, -1
 
 
-def _soft_to_hard(soft: List[int]) -> int:
-    """
-    Convert soft bits to hard integer value.
+def _soft_to_hard(soft: list[int]) -> int:
+    """Convert soft bits to hard integer value.
 
     Args:
+    ----
         soft: List of soft bit values (0 = strong 0, 0xFFFF = strong 1).
 
     Returns:
+    -------
         Hard integer value.
     """
     result = 0
@@ -173,46 +196,49 @@ def _soft_to_hard(soft: List[int]) -> int:
     return result
 
 
-def _soft_popcount(soft: List[int]) -> int:
-    """
-    Soft-valued equivalent of popcount.
+def _soft_popcount(soft: list[int]) -> int:
+    """Soft-valued equivalent of popcount.
 
     Args:
+    ----
         soft: List of soft bit values.
 
     Returns:
+    -------
         Sum of all soft values (higher = more 1s).
     """
     return sum(soft)
 
 
-def _int_to_soft(value: int, bits: int) -> List[int]:
-    """
-    Convert integer to soft bit list.
+def _int_to_soft(value: int, bits: int) -> list[int]:
+    """Convert integer to soft bit list.
 
     Args:
+    ----
         value: Integer value.
         bits: Number of bits.
 
     Returns:
+    -------
         List of soft bit values.
     """
     return [0xFFFF if (value >> i) & 1 else 0 for i in range(bits)]
 
 
-def _soft_xor(a: List[int], b: List[int]) -> List[int]:
-    """
-    XOR two soft bit vectors.
+def _soft_xor(a: list[int], b: list[int]) -> list[int]:
+    """XOR two soft bit vectors.
 
     Args:
+    ----
         a: First soft vector.
         b: Second soft vector.
 
     Returns:
+    -------
         XOR result.
     """
     result = []
-    for x, y in zip(a, b):
+    for x, y in zip(a, b, strict=False):
         # If either is uncertain (near 0x7FFF), result is uncertain
         # If both are same polarity, result is 0; opposite is 1
         x_bit = 1 if x > 0x7FFF else 0
@@ -226,18 +252,20 @@ def _soft_xor(a: List[int], b: List[int]) -> List[int]:
     return result
 
 
-def golay24_sdecode(codeword: List[int]) -> int:
-    """
-    Soft decode Golay(24,12) codeword.
+def golay24_sdecode(codeword: list[int]) -> int:
+    """Soft decode Golay(24,12) codeword.
 
     Args:
+    ----
         codeword: List of 24 soft bit values (MSB first as in M17 spec).
             Values: 0 = strong 0, 0xFFFF = strong 1.
 
     Returns:
+    -------
         Decoded 12-bit data, or 0xFFFF if uncorrectable.
 
     Examples:
+    --------
         >>> soft = [0xFFFF if b else 0 for b in [0,0,0,1,0,0,1,0,0,0,1,1,1,1,1,0,0,1,1,1,1,1,1,0]]
         >>> hex(golay24_sdecode(soft))
         '0x123'
@@ -278,9 +306,7 @@ def golay24_sdecode(codeword: List[int]) -> int:
     for i in range(11):
         for j in range(i + 1, 12):
             e = (1 << i) | (1 << j)
-            coded_error_soft = _int_to_soft(
-                ENCODE_MATRIX[i] ^ ENCODE_MATRIX[j], 12
-            )
+            coded_error_soft = _int_to_soft(ENCODE_MATRIX[i] ^ ENCODE_MATRIX[j], 12)
             sc = _soft_xor(syndrome_soft, coded_error_soft)
             weight = _soft_popcount(sc)
 
@@ -315,16 +341,17 @@ def golay24_sdecode(codeword: List[int]) -> int:
 
 
 def encode_lich(data: bytes) -> bytes:
-    """
-    Encode a 6-byte LICH chunk to 12 bytes using Golay(24,12).
+    """Encode a 6-byte LICH chunk to 12 bytes using Golay(24,12).
 
     Each 12-bit nibble pair is encoded to 24 bits.
     6 bytes (48 bits) -> 4 Golay codewords -> 12 bytes (96 bits).
 
     Args:
+    ----
         data: 6-byte LICH chunk.
 
     Returns:
+    -------
         12-byte encoded LICH.
     """
     if len(data) != 6:
@@ -360,14 +387,15 @@ def encode_lich(data: bytes) -> bytes:
     return bytes(result)
 
 
-def decode_lich(soft_bits: List[int]) -> bytes:
-    """
-    Decode a 96 soft-bit encoded LICH to 6 bytes.
+def decode_lich(soft_bits: list[int]) -> bytes:
+    """Decode a 96 soft-bit encoded LICH to 6 bytes.
 
     Args:
+    ----
         soft_bits: 96 soft bit values.
 
     Returns:
+    -------
         6-byte decoded LICH chunk.
     """
     if len(soft_bits) != 96:

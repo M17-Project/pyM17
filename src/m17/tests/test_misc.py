@@ -1,9 +1,8 @@
-from m17.misc import print_4bits, print_bits, print_8bits, print_16bits
+from m17.misc import print_4bits, print_8bits, print_16bits, print_bits
 
 
 def test_b():
-    """
-    Test the binary print functions
+    """Test the binary print functions
     :param x: number to test
 
     """

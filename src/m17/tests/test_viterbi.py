@@ -1,23 +1,22 @@
-"""
-Tests for M17 Viterbi Decoder
+"""Tests for M17 Viterbi Decoder
 
 Tests the soft-decision Viterbi decoder for K=5 rate 1/2 convolutional code.
 """
 
 import pytest
 
-from m17.codec.viterbi import (
-    ViterbiDecoder,
-    viterbi_decode,
-    viterbi_decode_punctured,
-    decode_lsf,
-    decode_stream,
-    decode_packet,
-    CONVOL_STATES,
-    VITERBI_HIST_LEN,
-)
 from m17.codec.convolutional import conv_encode, conv_encode_lsf, conv_encode_stream
 from m17.codec.puncture import PUNCTURE_P1, PUNCTURE_P2, PUNCTURE_P3, puncture
+from m17.codec.viterbi import (
+    CONVOL_STATES,
+    VITERBI_HIST_LEN,
+    ViterbiDecoder,
+    decode_lsf,
+    decode_packet,
+    decode_stream,
+    viterbi_decode,
+    viterbi_decode_punctured,
+)
 
 
 class TestViterbiDecoder:

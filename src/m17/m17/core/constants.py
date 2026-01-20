@@ -1,5 +1,4 @@
-"""
-M17 Protocol Constants
+"""M17 Protocol Constants
 
 Contains sync words, frame sizes, and other protocol constants.
 Supports M17 specification v2.0.3 and v3.0.0.
@@ -153,18 +152,21 @@ DEFAULT_PORT: int = 17000
 # Default DHT port
 DEFAULT_DHT_PORT: int = 17001
 
+
 def get_reflector_host(refname: str, domain: str) -> str:
-    """
-    Convert a reflector name to a hostname.
+    """Convert a reflector name to a hostname.
 
     Args:
+    ----
         refname: Reflector name (e.g., "M17-ABC").
         domain: Reflector domain suffix (required, e.g., "m17ref.example.com").
 
     Returns:
+    -------
         Full hostname (e.g., "M17-ABC.m17ref.example.com").
     """
     return f"{refname}.{domain}"
+
 
 # ============================================================================
 # Struct Layout Strings (for backward compatibility)

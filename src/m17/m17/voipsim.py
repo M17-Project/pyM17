@@ -1,6 +1,5 @@
 #!/usr/bin/env python
-"""
-VoIP Simulation Entry Point (Legacy Module)
+"""VoIP Simulation Entry Point (Legacy Module)
 
 .. deprecated:: 0.1.1
     This module is deprecated. Use ``python -m m17.apps voipsim`` instead.

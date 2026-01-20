@@ -1,27 +1,25 @@
-"""
-Tests for M17 Audio/Processing Blocks
+"""Tests for M17 Audio/Processing Blocks
 
 Tests for the processing chain blocks used in M17 applications.
 """
 
 import multiprocessing
-import queue
-import tempfile
 import os
-from unittest.mock import Mock, patch, MagicMock
+import tempfile
+from unittest.mock import Mock
 
 import pytest
 
 # Check if blocks module can be imported (requires kademlia)
 try:
     import m17.blocks
+
     BLOCKS_AVAILABLE = True
 except ImportError:
     BLOCKS_AVAILABLE = False
 
 pytestmark = pytest.mark.skipif(
-    not BLOCKS_AVAILABLE,
-    reason="blocks module requires kademlia dependency"
+    not BLOCKS_AVAILABLE, reason="blocks module requires kademlia dependency"
 )
 
 
@@ -68,6 +66,7 @@ class TestCodeblock:
 
         # Wait for outputs
         import time
+
         time.sleep(0.1)
         proc.terminate()
         proc.join()
@@ -144,6 +143,7 @@ class TestTeefile:
             proc.start()
 
             import time
+
             time.sleep(0.1)
             proc.terminate()
             proc.join()
@@ -185,6 +185,7 @@ class TestTeefile:
             proc.start()
 
             import time
+
             time.sleep(0.1)
             proc.terminate()
             proc.join()
@@ -206,8 +207,9 @@ class TestZeros:
 
     def test_zeros_generates_arrays(self):
         """Test zeros generates numpy arrays of zeros."""
-        from m17.blocks import zeros
         import numpy as np
+
+        from m17.blocks import zeros
 
         # Create zeros generator
         gen_fn = zeros(size=10, dtype="<h", rate=100)
@@ -224,6 +226,7 @@ class TestZeros:
         proc.start()
 
         import time
+
         time.sleep(0.05)
         proc.terminate()
         proc.join()
@@ -282,6 +285,7 @@ class TestNull:
         proc.start()
 
         import time
+
         time.sleep(0.05)
         proc.terminate()
         proc.join()

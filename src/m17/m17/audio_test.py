@@ -1,6 +1,5 @@
-"""
-Provides a test of the soundcard library. It will record from the default microphone and
- play back to the default speaker.
+"""Provides a test of the soundcard library. It will record from the default microphone and
+play back to the default speaker.
 """
 from __future__ import annotations
 
@@ -16,10 +15,7 @@ except Exception as exc:
 
 
 def audio_test_soundcard(mode: Union[int, str]) -> NoReturn:
-    """
-    Test the soundcard library.
-    """
-
+    """Test the soundcard library."""
     mode_int = int(mode)
     c2 = pycodec2.Codec2(mode_int)
     conrate: int = c2.samples_per_frame()
@@ -29,12 +25,10 @@ def audio_test_soundcard(mode: Union[int, str]) -> NoReturn:
     default_mic = sc.default_microphone()
     default_speaker = sc.default_speaker()
     print(default_mic, default_speaker)
-    sc_config = {
-        "samplerate": pa_rate,
-        "blocksize": conrate
-    }
-    with default_mic.recorder(**sc_config, channels=1) as mic, \
-            default_speaker.player(**sc_config, channels=1) as sp:
+    sc_config = {"samplerate": pa_rate, "blocksize": conrate}
+    with default_mic.recorder(**sc_config, channels=1) as mic, default_speaker.player(
+        **sc_config, channels=1
+    ) as sp:
         while 1:
             audio = mic.record(numframes=conrate)  # .transpose()
             audio = audio.flatten()

@@ -1,6 +1,5 @@
 #!/usr/bin/env python
-"""
-M17 Application Examples
+"""M17 Application Examples
 
 This module contains example applications for M17 protocol.
 """
@@ -10,7 +9,7 @@ import logging
 import multiprocessing
 import sys
 import time
-from typing import Any, Dict, List, NoReturn, Optional, Tuple, Union
+from typing import Any, NoReturn, Optional, Union
 
 import m17.blocks
 import m17.network
@@ -24,35 +23,38 @@ def default_config(c2_mode: int) -> DictDotAttribute:
     c2, conrate, bitframe = m17.blocks.codec2setup(c2_mode)
     logger.debug("conrate, bitframe = [%d,%d]", conrate, bitframe)
 
-    config = DictDotAttribute({
-        "m17": {
-            "dst": "",
-            "src": "",
-        },
-        "vox": {
-            "silence_threshold": 10,  # that's measured in queue packets
-        },
-        "codec2": {
-            "c2": c2,
-            "conrate": conrate,
-            "bitframe": bitframe,
-        },
-    })
+    config = DictDotAttribute(
+        {
+            "m17": {
+                "dst": "",
+                "src": "",
+            },
+            "vox": {
+                "silence_threshold": 10,  # that's measured in queue packets
+            },
+            "codec2": {
+                "c2": c2,
+                "conrate": conrate,
+                "bitframe": bitframe,
+            },
+        }
+    )
     return config
 
 
 def m17_parrot(refcallsign: str, port: Union[int, str] = DEFAULT_PORT) -> None:
-    """
-    A parrot service for M17.
+    """A parrot service for M17.
 
     Records incoming streams and plays them back after the incoming stream
     is complete (PTT released). Useful for testing audio quality.
 
     Args:
+    ----
         refcallsign: The callsign for the parrot service.
         port: UDP port to listen on.
 
     Raises:
+    ------
         NotImplementedError: This function is not yet implemented.
     """
     raise NotImplementedError(
@@ -62,22 +64,22 @@ def m17_parrot(refcallsign: str, port: Union[int, str] = DEFAULT_PORT) -> None:
 
 
 def m17_mirror(refcallsign: str, port: Union[int, str] = DEFAULT_PORT) -> None:
-    """
-    Mirror service for M17.
+    """Mirror service for M17.
 
     Reflects your M17 stream back to you after decoding and re-encoding.
     Useful for testing voice codec compatibility and audio transformations.
 
     Args:
+    ----
         refcallsign: The callsign for the mirror service.
         port: UDP port to listen on.
 
     Raises:
+    ------
         NotImplementedError: This function is not yet implemented.
     """
     raise NotImplementedError(
-        "m17_mirror is not yet implemented. "
-        "Required: decode -> transform -> encode pipeline."
+        "m17_mirror is not yet implemented. " "Required: decode -> transform -> encode pipeline."
     )
 
 
@@ -85,13 +87,10 @@ def udp_mirror(refcallsign: str, port: Union[int, str] = DEFAULT_PORT) -> None:
     # reflects your own UDP packets back to you after a delay
     port_int = int(port)
 
-    pkts: Dict[Tuple[str, int], DictDotAttribute] = {}
+    pkts: dict[tuple[str, int], DictDotAttribute] = {}
 
     def packet_handler(
-        sock: Any,
-        active_connections: Dict[Any, float],
-        bs: bytes,
-        conn: Tuple[str, int]
+        sock: Any, active_connections: dict[Any, float], bs: bytes, conn: tuple[str, int]
     ) -> None:
         if conn not in pkts:
             pkts[conn] = DictDotAttribute({"packets": [], "lastseen": time.time()})
@@ -101,12 +100,12 @@ def udp_mirror(refcallsign: str, port: Union[int, str] = DEFAULT_PORT) -> None:
             pkts[conn].lastseen = time.time()
 
     def timer(sock: Any) -> None:
-        def replay(conn: Tuple[str, int], packets: List[Tuple[float, bytes]]) -> None:
+        def replay(conn: tuple[str, int], packets: list[tuple[float, bytes]]) -> None:
             for reltime, bs in packets:
                 time.sleep(reltime)
                 sock.sendto(bs, conn)
 
-        delthese: List[Tuple[str, int]] = []
+        delthese: list[tuple[str, int]] = []
         for conn in pkts:
             if pkts[conn].lastseen + 10 < time.time():
                 # as udp_server is written, this will stop us from recvfrom - and that's okay for now
@@ -129,10 +128,7 @@ def udp_reflector(refcallsign: str, port: Union[int, str] = DEFAULT_PORT) -> NoR
     port_int = int(port)
 
     def packet_handler(
-        sock: Any,
-        active_connections: Dict[Any, float],
-        bs: bytes,
-        conn: Tuple[str, int]
+        sock: Any, active_connections: dict[Any, float], bs: bytes, conn: tuple[str, int]
     ) -> None:
         others = [c for c in active_connections.keys() if c != conn]
         for c in others:
@@ -147,24 +143,36 @@ def m17ref_client(
     mymodule: str,
     refname: str,
     module: str,
+    domain: str,
     port: Union[int, str] = DEFAULT_PORT,
-    mode: Union[int, str] = 3200
+    mode: Union[int, str] = 3200,
 ) -> None:
     mode_int = int(mode)  # so we can call modular_client straight from command line
     port_int = int(port)
-    if (refname.startswith("M17-") and len(refname) <= 7):
+    if refname.startswith("M17-") and len(refname) <= 7:
         # should also be able to look up registered port in dns
-        host = m17.network.m17ref_name2host(refname)
+        host = m17.network.m17ref_name2host(refname, domain)
         logger.debug("Resolved reflector host: %s", host)
         # fallback to fetching json if its not in dns already
     else:
         raise NotImplementedError("Reflector name must start with 'M17-' and be <= 7 chars")
     myrefmod = "%s %s" % (mycall, mymodule)
     c = m17.blocks.M17ReflectorClientBlocks(myrefmod, module, host, port_int)
-    tx_chain = [m17.blocks.mic_audio, m17.blocks.codec2enc, m17.blocks.vox, m17.blocks.m17frame, m17.blocks.tobytes,
-                c.sender()]
-    rx_chain = [c.receiver(), m17.blocks.m17parse, m17.blocks.payload2codec2, m17.blocks.codec2dec,
-                m17.blocks.spkr_audio]
+    tx_chain = [
+        m17.blocks.mic_audio,
+        m17.blocks.codec2enc,
+        m17.blocks.vox,
+        m17.blocks.m17frame,
+        m17.blocks.tobytes,
+        c.sender(),
+    ]
+    rx_chain = [
+        c.receiver(),
+        m17.blocks.m17parse,
+        m17.blocks.payload2codec2,
+        m17.blocks.codec2dec,
+        m17.blocks.spkr_audio,
+    ]
     config = default_config(mode_int)
     config.m17.dst = "%s %s" % (refname, module)
     config.m17.src = mycall
@@ -178,14 +186,19 @@ def voipsim(
     src: str = "W2FBI",
     dst: str = "SP5WWP",
     mode: Union[int, str] = 3200,
-    port: Union[int, str] = DEFAULT_PORT
+    port: Union[int, str] = DEFAULT_PORT,
 ) -> None:
     mode_int = int(mode)  # so we can call modular_client straight from command line
     port_int = int(port)
     config = default_config(mode_int)
     audio_sim = m17.blocks.zeros(size=config.codec2.conrate, dtype="<h", rate=50)
-    tx_chain = [audio_sim, m17.blocks.codec2enc, m17.blocks.m17frame, m17.blocks.tobytes,
-                m17.blocks.udp_send((host, port_int))]
+    tx_chain = [
+        audio_sim,
+        m17.blocks.codec2enc,
+        m17.blocks.m17frame,
+        m17.blocks.tobytes,
+        m17.blocks.udp_send((host, port_int)),
+    ]
     config.m17.dst = dst
     config.m17.src = src
     logger.debug("Config: %s", config)
@@ -193,14 +206,17 @@ def voipsim(
 
 
 def to_icecast(
-    icecast_url: str,
-    mode: Union[int, str] = 3200,
-    port: Union[int, str] = DEFAULT_PORT
+    icecast_url: str, mode: Union[int, str] = 3200, port: Union[int, str] = DEFAULT_PORT
 ) -> None:
     mode_int = int(mode)  # so we can call modular_client straight from command line
     port_int = int(port)
-    rx_chain = [m17.blocks.udp_recv(port_int), m17.blocks.m17parse, m17.blocks.payload2codec2, m17.blocks.codec2dec,
-                m17.blocks.ffmpeg(icecast_url)]
+    rx_chain = [
+        m17.blocks.udp_recv(port_int),
+        m17.blocks.m17parse,
+        m17.blocks.payload2codec2,
+        m17.blocks.codec2dec,
+        m17.blocks.ffmpeg(icecast_url),
+    ]
     # rx_chain = [udp_recv(port), m17parse, tee('m17'), payload2codec2, codec2dec, ffmpeg(icecast_url)]
     config = default_config(mode_int)
     modular(config, [rx_chain])
@@ -209,8 +225,15 @@ def to_icecast(
 def to_pcm(mode: Union[int, str] = 3200, port: Union[int, str] = DEFAULT_PORT) -> None:
     mode_int = int(mode)  # so we can call modular_client straight from command line
     port_int = int(port)
-    rx_chain = [m17.blocks.udp_recv(port_int), m17.blocks.m17parse, m17.blocks.tee('m17'), m17.blocks.payload2codec2,
-                m17.blocks.codec2dec, m17.blocks.teefile('m17.raw'), m17.blocks.null]
+    rx_chain = [
+        m17.blocks.udp_recv(port_int),
+        m17.blocks.m17parse,
+        m17.blocks.tee("m17"),
+        m17.blocks.payload2codec2,
+        m17.blocks.codec2dec,
+        m17.blocks.teefile("m17.raw"),
+        m17.blocks.null,
+    ]
     config = default_config(mode_int)
     modular(config, [rx_chain])
 
@@ -218,9 +241,17 @@ def to_pcm(mode: Union[int, str] = 3200, port: Union[int, str] = DEFAULT_PORT) -
 def recv_dump(mode: Union[int, str] = 3200, port: Union[int, str] = DEFAULT_PORT) -> None:
     mode_int = int(mode)  # so we can call modular_client straight from command line
     port_int = int(port)
-    rx_chain = [m17.blocks.udp_recv(port_int), m17.blocks.teefile("rx"), m17.blocks.m17parse, m17.blocks.tee('M17'),
-                m17.blocks.payload2codec2, m17.blocks.teefile('out.c2_3200'), m17.blocks.codec2dec,
-                m17.blocks.teefile('out.raw'), m17.blocks.spkr_audio]
+    rx_chain = [
+        m17.blocks.udp_recv(port_int),
+        m17.blocks.teefile("rx"),
+        m17.blocks.m17parse,
+        m17.blocks.tee("M17"),
+        m17.blocks.payload2codec2,
+        m17.blocks.teefile("out.c2_3200"),
+        m17.blocks.codec2dec,
+        m17.blocks.teefile("out.raw"),
+        m17.blocks.spkr_audio,
+    ]
     config = default_config(mode_int)
     modular(config, [rx_chain])
 
@@ -231,7 +262,7 @@ def voip(
     voipmode: str = "full",
     mode: Union[int, str] = 3200,
     src: str = "W2FBI",
-    dst: str = "SP5WWP"
+    dst: str = "SP5WWP",
 ) -> None:
     mode_int = int(mode)  # so we can call modular_client straight from command line
     port_int = int(port)
@@ -242,10 +273,21 @@ def voip(
     # this means the tx and rx paths are completely separate, which is,
     # if nothing else, simple to reason about
 
-    tx_chain: List[Any] = [m17.blocks.mic_audio, m17.blocks.codec2enc, m17.blocks.vox, m17.blocks.m17frame, m17.blocks.tobytes,
-                m17.blocks.udp_send((host, port_int))]
-    rx_chain: List[Any] = [m17.blocks.udp_recv(port_int), m17.blocks.m17parse, m17.blocks.payload2codec2, m17.blocks.codec2dec,
-                m17.blocks.spkr_audio]
+    tx_chain: list[Any] = [
+        m17.blocks.mic_audio,
+        m17.blocks.codec2enc,
+        m17.blocks.vox,
+        m17.blocks.m17frame,
+        m17.blocks.tobytes,
+        m17.blocks.udp_send((host, port_int)),
+    ]
+    rx_chain: list[Any] = [
+        m17.blocks.udp_recv(port_int),
+        m17.blocks.m17parse,
+        m17.blocks.payload2codec2,
+        m17.blocks.codec2dec,
+        m17.blocks.spkr_audio,
+    ]
     if voipmode == "tx":
         # disable the rx chain
         # useful for when something's already bound to listening port
@@ -268,26 +310,39 @@ def echolink_bridge(
     mymodule: str,
     refname: str,
     refmodule: str,
+    domain: str,
     refport: Union[int, str] = DEFAULT_PORT,
-    mode: Union[int, str] = 3200
+    mode: Union[int, str] = 3200,
 ) -> None:
     mode_int = int(mode)  # so we can call modular_client straight from command line
     refport_int = int(refport)
-    if (refname.startswith("M17-") and len(refname) <= 7):
+    if refname.startswith("M17-") and len(refname) <= 7:
         # should also be able to look up registered port in dns
-        host = m17.network.m17ref_name2host(refname)
+        host = m17.network.m17ref_name2host(refname, domain)
         logger.debug("Resolved reflector host: %s", host)
         # fallback to fetching json if its not in dns already
     else:
         raise NotImplementedError("Reflector name must start with 'M17-' and be <= 7 chars")
     myrefmod = "%s %s" % (mycall, mymodule)
     c = m17.blocks.M17ReflectorClientBlocks(myrefmod, refmodule, host, refport_int)
-    echolink_to_m17ref = [m17.blocks.udp_recv(55501), m17.blocks.chunker_b(640), m17.blocks.np_convert("<h"),
-                          m17.blocks.integer_decimate(2), m17.blocks.codec2enc, m17.blocks.m17frame,
-                          m17.blocks.tobytes, c.sender()]
-    m17ref_to_echolink = [c.receiver(), m17.blocks.m17parse, m17.blocks.payload2codec2, m17.blocks.codec2dec,
-                          m17.blocks.integer_interpolate(2),
-                          m17.blocks.udp_send(("127.0.0.1", 55500))]
+    echolink_to_m17ref = [
+        m17.blocks.udp_recv(55501),
+        m17.blocks.chunker_b(640),
+        m17.blocks.np_convert("<h"),
+        m17.blocks.integer_decimate(2),
+        m17.blocks.codec2enc,
+        m17.blocks.m17frame,
+        m17.blocks.tobytes,
+        c.sender(),
+    ]
+    m17ref_to_echolink = [
+        c.receiver(),
+        m17.blocks.m17parse,
+        m17.blocks.payload2codec2,
+        m17.blocks.codec2dec,
+        m17.blocks.integer_interpolate(2),
+        m17.blocks.udp_send(("127.0.0.1", 55500)),
+    ]
     config = default_config(mode_int)
     config.m17.dst = "%s %s" % (refname, refmodule)
     config.m17.src = mycall
@@ -300,7 +355,7 @@ def m17_to_echolink(
     port: Union[int, str] = DEFAULT_PORT,
     echolink_host: str = "localhost",
     mode: Union[int, str] = 3200,
-    echolink_audio_in_port: Union[int, str] = 55500
+    echolink_audio_in_port: Union[int, str] = 55500,
 ) -> None:
     port_int = int(port)
     mode_int = int(mode)
@@ -311,9 +366,11 @@ def m17_to_echolink(
     """
     chain = [
         m17.blocks.udp_recv(port_int),
-        m17.blocks.m17parse, m17.blocks.payload2codec2, m17.blocks.codec2dec,
+        m17.blocks.m17parse,
+        m17.blocks.payload2codec2,
+        m17.blocks.codec2dec,
         m17.blocks.integer_interpolate(2),  # echolink wants 16k audio
-        m17.blocks.udp_send((echolink_host, echolink_audio_in_port_int))
+        m17.blocks.udp_send((echolink_host, echolink_audio_in_port_int)),
     ]
     config = default_config(mode_int)
     config.verbose = 0
@@ -321,9 +378,7 @@ def m17_to_echolink(
 
 
 def _test_chains_example(mode: int = 3200) -> None:
-    """
-    example playground for testing
-    """
+    """Example playground for testing"""
     test_chain = [
         m17.blocks.mic_audio,
         m17.blocks.codec2enc,  # .02ms of audio per q element at c2.3200 in this part of chain
@@ -340,16 +395,15 @@ def _test_chains_example(mode: int = 3200) -> None:
         # payload2codec2, #back to .02ms per q el
         m17.blocks.codec2dec,
         # null,
-        m17.blocks.spkr_audio
+        m17.blocks.spkr_audio,
     ]
     config = default_config(mode)
     config.verbose = 1
     modular(config, [test_chain])
 
 
-def modular(config: DictDotAttribute, chains: List[List[Any]]) -> None:
-    """
-    Take in a global configuration, and a list of lists of queue
+def modular(config: DictDotAttribute, chains: list[list[Any]]) -> None:
+    """Take in a global configuration, and a list of lists of queue
     processing functions, and hook them up in a chain, each function in
     its own process
     Fantastic for designing, developing, and debugging new features.
@@ -378,39 +432,39 @@ def modular(config: DictDotAttribute, chains: List[List[Any]]) -> None:
         unless at end of chain, create an outq for each fn, outq=
 
     """
-    modules: Dict[str, Any] = {
+    modules: dict[str, Any] = {
         "chains": chains,
         "queues": [],
         "processes": [],
     }
 
     for chainidx, chain in enumerate(modules["chains"]):
-        inq: Optional["multiprocessing.Queue[Any]"] = None
+        inq: Optional[multiprocessing.Queue[Any]] = None
         for fnidx, fn in enumerate(chain):
             name = fn.__name__
-            outq: Optional["multiprocessing.Queue[Any]"]
+            outq: Optional[multiprocessing.Queue[Any]]
             if fnidx != len(chain):
                 outq = multiprocessing.Queue()
                 modules["queues"].append(outq)
             else:
                 outq = None
-            process = multiprocessing.Process(name="chain_%d/fn_%d/%s" % (chainidx, fnidx, name), target=fn,
-                                              args=(config, inq, outq))
-            modules["processes"].append({
-                "name": name,
-                "inq": inq,
-                "outq": outq,
-                "process": process
-            })
+            process = multiprocessing.Process(
+                name="chain_%d/fn_%d/%s" % (chainidx, fnidx, name),
+                target=fn,
+                args=(config, inq, outq),
+            )
+            modules["processes"].append(
+                {"name": name, "inq": inq, "outq": outq, "process": process}
+            )
             process.start()
             inq = outq
     try:
-        procs = modules['processes']
+        procs = modules["processes"]
         while 1:
-            if any(not p['process'].is_alive() for p in procs):
+            if any(not p["process"].is_alive() for p in procs):
                 logger.warning("Lost a client process")
                 break
-            time.sleep(.05)
+            time.sleep(0.05)
         # I can see where this is going to need to change
         # it's fine for now, but a real server will need something different
     except KeyboardInterrupt:
@@ -424,7 +478,7 @@ def modular(config: DictDotAttribute, chains: List[List[Any]]) -> None:
 
 
 if __name__ == "__main__":
-    _CLI_COMMANDS: Dict[str, Any] = {
+    _CLI_COMMANDS: dict[str, Any] = {
         "m17_parrot": m17_parrot,
         "m17_mirror": m17_mirror,
         "udp_mirror": udp_mirror,
@@ -440,7 +494,7 @@ if __name__ == "__main__":
         "modular": modular,
     }
     if len(sys.argv) < 2 or sys.argv[1] not in _CLI_COMMANDS:
-        print(f"Usage: python -m m17.apps <command> [args]")
+        print("Usage: python -m m17.apps <command> [args]")
         print(f"Commands: {', '.join(_CLI_COMMANDS.keys())}")
         sys.exit(1)
     _CLI_COMMANDS[sys.argv[1]](*sys.argv[2:])
