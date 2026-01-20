@@ -7,6 +7,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Cryptographic Module** (`m17/crypto/`)
+  - **Scrambler encryption** (`scrambler.py`)
+    - 8/16/24-bit LFSR-based encryption
+    - `Scrambler` class with `encrypt()`, `decrypt()`, `generate_keystream()`
+    - Convenience functions `scrambler_encrypt()`, `scrambler_decrypt()`
+    - Standard M17 LFSR polynomials for each mode
+  - **AES encryption** (`aes.py`)
+    - AES-128/192/256 in CTR mode
+    - `AESEncryptor` class for stream and packet encryption
+    - IV construction from 14-byte META + 2-byte frame number
+    - Convenience functions `aes_encrypt()`, `aes_decrypt()`
+    - Requires optional `cryptography` dependency
+  - **Digital signatures** (`signature.py`)
+    - ECDSA with secp256r1 (P-256) curve for M17 v3.0.0
+    - `SigningKey` class for message signing
+    - `VerifyingKey` class for signature verification
+    - 64-byte signature format (r || s, each 32 bytes)
+    - Compressed and uncompressed public key support
+    - Convenience functions `sign_message()`, `verify_signature()`, `generate_keypair()`
+    - Requires optional `cryptography` dependency
+
+- **BERT Frame Support** (`m17/frames/bert.py`)
+  - `BERTGenerator` - PRBS-9 pseudo-random sequence generator for test patterns
+  - `BERTFrame` - BERT frame with 25-byte payload (197 bits used)
+  - RF encoding/decoding with convolutional FEC and P2 puncturing
+  - `calculate_ber()` - Bit Error Rate calculation utility
+  - Sync word 0xDF55 for BERT frames
+
+- **New tests** - 86 new tests (518 total, up from 432)
+  - `test_crypto.py` - 53 tests for scrambler, AES, and digital signatures
+  - `test_bert.py` - 33 tests for BERT generator, frames, and BER calculation
+  - Coverage improved to 59%
+
+- **Optional dependency** - `cryptography` for AES and digital signatures
+  - New extra: `crypto = ["cryptography"]`
+  - Updated `all` extra to include cryptography
+
 ## [0.1.3] - 2026-01-20
 
 ### Breaking Changes

@@ -30,7 +30,7 @@ Remaining work items for pyM17 development.
 
 ### Testing & Quality
 
-- [ ] **Increase test coverage** - Current: 56%, Target: 80%+
+- [ ] **Increase test coverage** - Current: 59%, Target: 80%+
   - [x] Add tests for `m17/codec/viterbi.py` (now 100% coverage)
   - [x] Add tests for `m17/codec/puncture.py` (now 100% coverage)
   - [x] Add tests for `m17/codec/randomize.py` (now 100% coverage)
@@ -116,20 +116,20 @@ Remaining work items for pyM17 development.
 
 ### Features
 
-- [ ] **Encryption support**
-  - [ ] Implement scrambler encryption
-  - [ ] Implement AES-256 encryption
-  - [ ] Add key management utilities
+- [x] **Encryption support** (2026-01-20)
+  - [x] Implement scrambler encryption (8/16/24-bit LFSR)
+  - [x] Implement AES encryption (128/192/256-bit CTR mode)
+  - [x] Add `cryptography` as optional dependency
 
-- [ ] **BERT mode support**
-  - [ ] Implement BERT frame generation
-  - [ ] Implement BERT frame reception/analysis
-  - [ ] Add BER calculation utilities
+- [x] **BERT mode support** (2026-01-20)
+  - [x] Implement BERT frame generation (`BERTGenerator`, `BERTFrame`)
+  - [x] Implement BERT frame RF encoding/decoding
+  - [x] Add BER calculation utilities (`calculate_ber()`)
 
-- [ ] **Digital signatures (v3.0.0)**
-  - [ ] Implement ECDSA secp256r1 signing
-  - [ ] Implement signature verification
-  - [ ] Add key generation utilities
+- [x] **Digital signatures (v3.0.0)** (2026-01-20)
+  - [x] Implement ECDSA secp256r1 signing (`SigningKey`)
+  - [x] Implement signature verification (`VerifyingKey`)
+  - [x] Add key generation utilities (`generate_keypair()`)
 
 ## Low Priority
 

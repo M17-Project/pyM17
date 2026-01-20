@@ -31,13 +31,17 @@ samplerate = { version = "^0.2.1", optional = true }
 kademlia = { version = "^2.2.2", optional = true }
 rpcudp = { version = "^5.0.0", optional = true }
 
+# Cryptography (for AES encryption)
+cryptography = { version = "^42.0.0", optional = true }
+
 # HTTP requests (for optional features)
 requests = { version = "^2.32.3", optional = true }
 
 [tool.poetry.extras]
 audio = ["pycodec2", "soundcard", "samplerate"]
 dht = ["kademlia", "rpcudp"]
-all = ["pycodec2", "soundcard", "samplerate", "kademlia", "rpcudp", "requests"]
+crypto = ["cryptography"]
+all = ["pycodec2", "soundcard", "samplerate", "kademlia", "rpcudp", "requests", "cryptography"]
 
 [tool.poetry.group.dev.dependencies]
 flake8 = "^7.0.0"
