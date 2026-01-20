@@ -2,7 +2,7 @@
 """
 VoIP Simulation Entry Point (Legacy Module)
 
-.. deprecated:: 1.0.0
+.. deprecated:: 0.1.1
     This module is deprecated. Use ``python -m m17.apps voipsim`` instead.
 """
 import logging

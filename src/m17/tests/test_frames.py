@@ -1,7 +1,7 @@
 """
 Test the encoding and decoding of M17 frames.
 
-Updated for modernized pyM17 API (v1.0.0).
+Updated for modernized pyM17 API (v0.1.x).
 """
 import unittest
 

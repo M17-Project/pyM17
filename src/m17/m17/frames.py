@@ -1,7 +1,7 @@
 """
 M17 frames (Legacy Module)
 
-.. deprecated:: 1.0.0
+.. deprecated:: 0.1.1
     This module is deprecated. Use the :mod:`m17.frames` package instead.
 
     Example migration::

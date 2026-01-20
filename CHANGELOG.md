@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.3] - 2026-01-20
+
 ### Breaking Changes
 
 - **Removed default hostname constants** (`core/constants.py`)
@@ -39,6 +41,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `frames/packet.py` - Invalid TLE data now logs warnings instead of silent `pass`
   - `__init__.py` - ImportErrors now logged at debug level instead of swallowed
 
+- **Fixed version inconsistency**
+  - `__init__.py.__version__` was "1.0.0", now correctly set to "0.1.3"
+  - Deprecation warnings now use correct version numbers (`deprecated:: 0.1.1`, `will be removed in v1.0`)
+
 ### Changed
 
 - **Enabled mypy strict mode** - Full type safety enforcement
@@ -69,7 +75,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **Comprehensive test suite** - 348 tests, coverage improved from 35% to 43%
+- **Comprehensive test suite** - 432 tests, coverage improved from 35% to 56%
   - `test_viterbi.py` - Viterbi decoder tests (100% coverage)
   - `test_convolutional.py` - Convolutional encoder tests (98% coverage)
   - `test_puncture.py` - Puncture pattern tests (100% coverage)
@@ -78,6 +84,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `test_lich.py` - LICH handling tests (98% coverage)
   - `test_blocks.py` - Audio processing blocks tests
   - `test_integration.py` - Full FEC pipeline and frame roundtrip tests
+  - `test_net.py` - Networking module tests (86 tests)
+    - ReflectorProtocol, ReflectorConnection, M17ReflectorClient (87% coverage)
+    - P2PConnection, P2PManager (75% coverage)
+    - DHTConfig, M17DHTNode (46% coverage, kademlia tests skipped if not installed)
+    - M17ClientConfig, M17NetworkClient, StreamContext (89% coverage)
 
 - **Network port constants** (`core/constants.py`)
   - `DEFAULT_DHT_PORT` (17001)

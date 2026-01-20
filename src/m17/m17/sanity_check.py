@@ -3,7 +3,7 @@ Sanity Check Script (Legacy Module)
 
 This script checks if the required optional modules are installed and working properly.
 
-.. deprecated:: 1.0.0
+.. deprecated:: 0.1.1
     This module is deprecated. Use ``poetry install -E audio`` to install
     audio dependencies, which will validate the installation.
 """

@@ -1,7 +1,7 @@
 """
 M17 Addressing (Legacy Module)
 
-.. deprecated:: 1.0.0
+.. deprecated:: 0.1.1
     This module is deprecated. Use :mod:`m17.core.address` instead.
 
     Example migration::
@@ -25,7 +25,7 @@ M17AddressLayout = struct.Struct(M17_ADDRESS_LAYOUT_STRUCT)
 
 # Emit deprecation warning on module import
 warnings.warn(
-    "m17.address is deprecated and will be removed in v2.0. "
+    "m17.address is deprecated and will be removed in v1.0. "
     "Use m17.core.address instead.",
     DeprecationWarning,
     stacklevel=2,

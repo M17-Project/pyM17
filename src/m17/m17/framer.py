@@ -4,8 +4,8 @@ M17 Framer Classes (Legacy Module)
 This module contains the M17 framer classes. These classes are responsible for
 taking a payload and turning it into a series of frames.
 
-.. deprecated:: 1.0.0
-    This module is deprecated and will be removed in v2.0.
+.. deprecated:: 0.1.1
+    This module is deprecated and will be removed in v1.0.
     Consider using the frame classes directly from :mod:`m17.frames`.
 """
 from __future__ import annotations
@@ -20,7 +20,7 @@ from m17.misc import chunk
 
 # Emit deprecation warning on module import
 warnings.warn(
-    "m17.framer is deprecated and will be removed in v2.0. "
+    "m17.framer is deprecated and will be removed in v1.0. "
     "Consider using frame classes directly from m17.frames.",
     DeprecationWarning,
     stacklevel=2,

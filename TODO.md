@@ -30,12 +30,17 @@ Remaining work items for pyM17 development.
 
 ### Testing & Quality
 
-- [ ] **Increase test coverage** - Current: 43%, Target: 80%+
+- [ ] **Increase test coverage** - Current: 56%, Target: 80%+
   - [x] Add tests for `m17/codec/viterbi.py` (now 100% coverage)
   - [x] Add tests for `m17/codec/puncture.py` (now 100% coverage)
   - [x] Add tests for `m17/codec/randomize.py` (now 100% coverage)
   - [x] Add tests for `m17/codec/convolutional.py` (now 98% coverage)
-  - [ ] Add tests for `m17/net/` modules (0% coverage)
+  - [x] Add tests for `m17/net/` modules (2026-01-20)
+    - `net/__init__.py` - 100% coverage
+    - `net/reflector.py` - 87% coverage (86 tests)
+    - `net/p2p.py` - 75% coverage
+    - `net/client.py` - 89% coverage
+    - `net/dht.py` - 46% coverage (kademlia tests skipped if not installed)
   - [x] Add tests for `m17/frames/packet.py` (78% coverage) - TLE tests added
   - [x] Add tests for `m17/frames/stream.py` (now 98% coverage)
   - [x] Add tests for `m17/frames/lich.py` (now 98% coverage)
@@ -235,4 +240,4 @@ Remaining work items for pyM17 development.
 
 ---
 
-Last updated: 2026-01-19
+Last updated: 2026-01-20

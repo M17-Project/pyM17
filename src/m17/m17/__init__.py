@@ -32,7 +32,7 @@ For more details, see the submodules:
 
 import logging
 
-__version__ = "1.0.0"
+__version__ = "0.1.3"
 
 logger = logging.getLogger(__name__)
 
@@ -84,7 +84,7 @@ from m17.frames import (
 # Legacy API - Backward compatibility with existing code
 # =============================================================================
 
-# Legacy imports from old locations (deprecated, will be removed in v2.0)
+# Legacy imports from old locations (deprecated, will be removed in v1.0)
 # Import old modules to ensure backward compatibility
 try:
     from m17.address import Address as _LegacyAddress

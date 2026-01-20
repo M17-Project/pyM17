@@ -3,7 +3,7 @@ M17 Networking (Legacy Module)
 
 This module contains legacy networking code for M17.
 
-.. deprecated:: 1.0.0
+.. deprecated:: 0.1.1
     This module is deprecated. Use the :mod:`m17.net` package instead.
 
     Example migration::
@@ -44,7 +44,7 @@ logger = logging.getLogger(__name__)
 
 # Emit deprecation warning on module import
 warnings.warn(
-    "m17.network is deprecated and will be removed in v2.0. "
+    "m17.network is deprecated and will be removed in v1.0. "
     "Use the m17.net package instead.",
     DeprecationWarning,
     stacklevel=2,
