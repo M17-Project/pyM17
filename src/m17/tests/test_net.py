@@ -7,6 +7,7 @@ Tests cover:
 - m17.net.client - High-level network client
 """
 
+import asyncio
 import json
 import socket
 import time
@@ -906,6 +907,460 @@ class TestP2PManager:
 
         await manager.start()
         await manager.poll()  # Should not raise
+
+        await manager.stop()
+
+    @pytest.mark.asyncio
+    @patch("socket.socket")
+    async def test_poll_no_socket(self, mock_socket_class):
+        """Test poll when socket not initialized."""
+        from m17.net.p2p import P2PManager
+
+        manager = P2PManager(
+            callsign="N0CALL",
+            primaries=[("primary.example.com", 17000)],
+        )
+
+        # Poll without starting (no socket)
+        await manager.poll()  # Should return early without error
+
+    @pytest.mark.asyncio
+    @patch("socket.socket")
+    async def test_poll_m17_frame(self, mock_socket_class):
+        """Test poll receiving M17 frame."""
+        from m17.net.p2p import P2PManager
+
+        mock_sock = MagicMock()
+        mock_socket_class.return_value = mock_sock
+
+        # Create a valid M17 frame
+        frame = IPFrame.create(dst="W2FBI", src="N0CALL", stream_id=0x1234)
+        frame_data = bytes(frame)
+
+        # First call returns frame, second raises BlockingIOError
+        mock_sock.recvfrom.side_effect = [
+            (frame_data, ("192.168.1.100", 17000)),
+            BlockingIOError(),
+        ]
+
+        manager = P2PManager(
+            callsign="N0CALL",
+            primaries=[("primary.example.com", 17000)],
+        )
+
+        received_frames = []
+
+        def callback(frame, addr):
+            received_frames.append((frame, addr))
+
+        manager.set_frame_callback(callback)
+
+        await manager.start()
+        manager._last_registration = time.time()  # Skip re-registration
+        await manager.poll()
+
+        assert len(received_frames) == 1
+        assert received_frames[0][1] == ("192.168.1.100", 17000)
+
+        await manager.stop()
+
+    @pytest.mark.asyncio
+    @patch("socket.socket")
+    async def test_poll_m17_frame_invalid(self, mock_socket_class):
+        """Test poll with invalid M17 frame."""
+        from m17.net.p2p import P2PManager
+
+        mock_sock = MagicMock()
+        mock_socket_class.return_value = mock_sock
+
+        # Invalid M17 frame (wrong size)
+        mock_sock.recvfrom.side_effect = [
+            (b"M17 invalid", ("192.168.1.100", 17000)),
+            BlockingIOError(),
+        ]
+
+        manager = P2PManager(
+            callsign="N0CALL",
+            primaries=[("primary.example.com", 17000)],
+        )
+
+        await manager.start()
+        manager._last_registration = time.time()
+        await manager.poll()  # Should log warning but not raise
+
+        await manager.stop()
+
+    @pytest.mark.asyncio
+    @patch("socket.socket")
+    async def test_poll_json_message(self, mock_socket_class):
+        """Test poll receiving JSON message."""
+        from m17.net.p2p import MessageType, P2PManager
+
+        mock_sock = MagicMock()
+        mock_socket_class.return_value = mock_sock
+
+        # JSON IS_AT message
+        msg = {
+            "msgtype": MessageType.IS_AT,
+            "callsign": "W2FBI",
+            "host": "192.168.1.200",
+            "port": 17000,
+        }
+        json_data = b"M17J" + json.dumps(msg).encode("utf-8")
+
+        mock_sock.recvfrom.side_effect = [
+            (json_data, ("192.168.1.100", 17000)),
+            BlockingIOError(),
+        ]
+
+        manager = P2PManager(
+            callsign="N0CALL",
+            primaries=[("primary.example.com", 17000)],
+        )
+
+        await manager.start()
+        manager._last_registration = time.time()
+        await manager.poll()
+
+        # Location should be stored
+        assert "W2FBI" in manager._whereis
+
+        await manager.stop()
+
+    @pytest.mark.asyncio
+    @patch("socket.socket")
+    async def test_poll_invalid_json(self, mock_socket_class):
+        """Test poll with invalid JSON message."""
+        from m17.net.p2p import P2PManager
+
+        mock_sock = MagicMock()
+        mock_socket_class.return_value = mock_sock
+
+        mock_sock.recvfrom.side_effect = [
+            (b"M17J{invalid json", ("192.168.1.100", 17000)),
+            BlockingIOError(),
+        ]
+
+        manager = P2PManager(
+            callsign="N0CALL",
+            primaries=[("primary.example.com", 17000)],
+        )
+
+        await manager.start()
+        manager._last_registration = time.time()
+        await manager.poll()  # Should log warning but not raise
+
+        await manager.stop()
+
+    @pytest.mark.asyncio
+    @patch("socket.socket")
+    async def test_poll_exception(self, mock_socket_class):
+        """Test poll handles general exceptions."""
+        from m17.net.p2p import P2PManager
+
+        mock_sock = MagicMock()
+        mock_socket_class.return_value = mock_sock
+
+        mock_sock.recvfrom.side_effect = OSError("Network error")
+
+        manager = P2PManager(
+            callsign="N0CALL",
+            primaries=[("primary.example.com", 17000)],
+        )
+
+        await manager.start()
+        manager._last_registration = time.time()
+        await manager.poll()  # Should log warning but not raise
+
+        await manager.stop()
+
+    @pytest.mark.asyncio
+    @patch("socket.socket")
+    async def test_handle_where_am_i(self, mock_socket_class):
+        """Test handling WHERE_AM_I message."""
+        from m17.net.p2p import MessageType, P2PManager
+
+        mock_sock = MagicMock()
+        mock_socket_class.return_value = mock_sock
+
+        manager = P2PManager(
+            callsign="N0CALL",
+            primaries=[("primary.example.com", 17000)],
+        )
+
+        await manager.start()
+
+        # Handle WHERE_AM_I message
+        msg = {"msgtype": MessageType.WHERE_AM_I, "callsign": "W2FBI"}
+        manager._handle_json_message(msg, ("192.168.1.100", 17000))
+
+        # Location should be stored
+        assert "W2FBI" in manager._whereis
+
+        await manager.stop()
+
+    @pytest.mark.asyncio
+    @patch("socket.socket")
+    async def test_handle_i_am_here(self, mock_socket_class):
+        """Test handling I_AM_HERE message."""
+        from m17.net.p2p import MessageType, P2PManager
+
+        mock_sock = MagicMock()
+        mock_socket_class.return_value = mock_sock
+
+        manager = P2PManager(
+            callsign="N0CALL",
+            primaries=[("primary.example.com", 17000)],
+        )
+
+        await manager.start()
+
+        # Handle I_AM_HERE message
+        msg = {"msgtype": MessageType.I_AM_HERE, "callsign": "K3ABC"}
+        manager._handle_json_message(msg, ("192.168.1.100", 17000))
+
+        # Location should be stored
+        assert "K3ABC" in manager._whereis
+
+        await manager.stop()
+
+    @pytest.mark.asyncio
+    @patch("socket.socket")
+    async def test_handle_introducing(self, mock_socket_class):
+        """Test handling INTRODUCING message initiates hole punch."""
+        from m17.net.p2p import MessageType, P2PManager
+
+        mock_sock = MagicMock()
+        mock_socket_class.return_value = mock_sock
+
+        manager = P2PManager(
+            callsign="N0CALL",
+            primaries=[("primary.example.com", 17000)],
+        )
+
+        await manager.start()
+
+        # Handle INTRODUCING message
+        msg = {
+            "msgtype": MessageType.INTRODUCING,
+            "callsign": "W2FBI",
+            "host": "192.168.1.200",
+            "port": 17000,
+        }
+        manager._handle_json_message(msg, ("primary.example.com", 17000))
+
+        # Should have sent HI message to the introduced peer
+        calls = mock_sock.sendto.call_args_list
+        # Find the HI message
+        hi_sent = False
+        for call in calls:
+            data, addr = call[0]
+            if data.startswith(b"M17J") and b'"msgtype": 6' in data:
+                hi_sent = True
+                assert addr == ("192.168.1.200", 17000)
+        assert hi_sent
+
+        await manager.stop()
+
+    @pytest.mark.asyncio
+    @patch("socket.socket")
+    async def test_lookup_cache_hit(self, mock_socket_class):
+        """Test lookup returns cached result."""
+        from m17.net.p2p import P2PManager
+
+        mock_sock = MagicMock()
+        mock_socket_class.return_value = mock_sock
+
+        manager = P2PManager(
+            callsign="N0CALL",
+            primaries=[("primary.example.com", 17000)],
+        )
+
+        await manager.start()
+
+        # Pre-populate cache
+        manager._whereis["W2FBI"] = (time.time(), ("192.168.1.200", 17000))
+
+        # Lookup should return cached value
+        result = await manager.lookup("W2FBI")
+        assert result == ("192.168.1.200", 17000)
+
+        await manager.stop()
+
+    @pytest.mark.asyncio
+    @patch("socket.socket")
+    async def test_lookup_cache_expired(self, mock_socket_class):
+        """Test lookup ignores expired cache entry."""
+        from m17.net.p2p import P2PManager
+
+        mock_sock = MagicMock()
+        mock_socket_class.return_value = mock_sock
+
+        manager = P2PManager(
+            callsign="N0CALL",
+            primaries=[("primary.example.com", 17000)],
+        )
+
+        await manager.start()
+
+        # Pre-populate cache with old entry
+        manager._whereis["W2FBI"] = (time.time() - 100, ("192.168.1.200", 17000))
+
+        # Lookup should send query (cache expired)
+        result = await manager.lookup("W2FBI")
+        assert result is None
+
+        # Should have sent WHERE_IS
+        calls = mock_sock.sendto.call_args_list
+        assert any(b'"msgtype": 2' in call[0][0] for call in calls)
+
+        await manager.stop()
+
+    @pytest.mark.asyncio
+    @patch("socket.socket")
+    async def test_has_connection_stale_cleanup(self, mock_socket_class):
+        """Test has_connection removes stale connections."""
+        from m17.net.p2p import P2PConnection, P2PManager
+
+        mock_sock = MagicMock()
+        mock_socket_class.return_value = mock_sock
+
+        manager = P2PManager(
+            callsign="N0CALL",
+            primaries=[("primary.example.com", 17000)],
+        )
+
+        await manager.start()
+
+        # Add stale connection
+        manager._connections["W2FBI"] = P2PConnection(
+            callsign="W2FBI",
+            addr=("192.168.1.200", 17000),
+            last_seen=time.time() - 100,  # Very old
+        )
+
+        # has_connection should return False and clean up
+        assert manager.has_connection("W2FBI") is False
+        assert "W2FBI" not in manager._connections
+
+        await manager.stop()
+
+    @pytest.mark.asyncio
+    @patch("socket.socket")
+    async def test_send_frame_success(self, mock_socket_class):
+        """Test send_frame with active connection."""
+        from m17.net.p2p import P2PConnection, P2PManager
+
+        mock_sock = MagicMock()
+        mock_socket_class.return_value = mock_sock
+
+        manager = P2PManager(
+            callsign="N0CALL",
+            primaries=[("primary.example.com", 17000)],
+        )
+
+        await manager.start()
+
+        # Add active connection
+        manager._connections["W2FBI"] = P2PConnection(
+            callsign="W2FBI",
+            addr=("192.168.1.200", 17000),
+        )
+
+        # Create and send frame
+        frame = IPFrame.create(dst="W2FBI", src="N0CALL", stream_id=0x1234)
+        result = await manager.send_frame(frame, "W2FBI")
+
+        assert result is True
+
+        # Verify frame was sent
+        calls = mock_sock.sendto.call_args_list
+        frame_sent = any(
+            call[0][1] == ("192.168.1.200", 17000) and call[0][0].startswith(b"M17 ")
+            for call in calls
+        )
+        assert frame_sent
+
+        await manager.stop()
+
+    @pytest.mark.asyncio
+    @patch("socket.socket")
+    async def test_connect_success(self, mock_socket_class):
+        """Test connect succeeds when connection established."""
+        from m17.net.p2p import P2PConnection, P2PManager
+
+        mock_sock = MagicMock()
+        mock_socket_class.return_value = mock_sock
+
+        manager = P2PManager(
+            callsign="N0CALL",
+            primaries=[("primary.example.com", 17000)],
+        )
+
+        await manager.start()
+
+        # Pre-establish connection before calling connect
+        manager._connections["W2FBI"] = P2PConnection(
+            callsign="W2FBI",
+            addr=("192.168.1.200", 17000),
+        )
+
+        result = await manager.connect("W2FBI", timeout=0.1)
+
+        assert result is True
+
+        await manager.stop()
+
+    @pytest.mark.asyncio
+    @patch("socket.socket")
+    @patch("asyncio.sleep", return_value=None)
+    async def test_connect_timeout(self, mock_sleep, mock_socket_class):
+        """Test connect times out when no connection established."""
+        from m17.net.p2p import P2PManager
+
+        mock_sock = MagicMock()
+        mock_socket_class.return_value = mock_sock
+
+        manager = P2PManager(
+            callsign="N0CALL",
+            primaries=[("primary.example.com", 17000)],
+        )
+
+        await manager.start()
+
+        # No connection will be established
+        result = await manager.connect("W2FBI", timeout=0.05)
+
+        assert result is False
+
+        await manager.stop()
+
+    @pytest.mark.asyncio
+    @patch("socket.socket")
+    async def test_poll_auto_reregister(self, mock_socket_class):
+        """Test poll triggers re-registration when needed."""
+        from m17.net.p2p import P2PManager
+
+        mock_sock = MagicMock()
+        mock_socket_class.return_value = mock_sock
+        mock_sock.recvfrom.side_effect = BlockingIOError()
+
+        manager = P2PManager(
+            callsign="N0CALL",
+            primaries=[("primary.example.com", 17000)],
+        )
+
+        await manager.start()
+
+        # Set old registration time
+        manager._last_registration = time.time() - 30
+
+        mock_sock.sendto.reset_mock()
+        await manager.poll()
+
+        # Should have sent I_AM_HERE for re-registration
+        calls = mock_sock.sendto.call_args_list
+        assert any(b'"msgtype": 1' in call[0][0] for call in calls)
 
         await manager.stop()
 

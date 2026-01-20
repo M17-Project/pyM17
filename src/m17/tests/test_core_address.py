@@ -233,3 +233,82 @@ class TestAddressEdgeCases:
         """Test that callsign and numeric cannot both be provided."""
         with pytest.raises(ValueError):
             Address(callsign="W2FBI", numeric=0x161AE1F)
+
+    def test_invalid_bytes_length(self):
+        """Test that wrong bytes length raises error."""
+        with pytest.raises(ValueError, match="must be 6 bytes"):
+            Address(addr=b"\x00\x00\x00")  # Only 3 bytes
+
+    def test_addr_out_of_range(self):
+        """Test that out of range address raises error."""
+        with pytest.raises(ValueError, match="must be 0-0xFFFFFFFFFFFF"):
+            Address(addr=0x1000000000000)  # 7 bytes worth
+
+    def test_invalid_addr_type(self):
+        """Test that invalid addr type raises error."""
+        with pytest.raises(TypeError, match="Invalid addr type"):
+            Address(addr=[1, 2, 3])  # type: ignore
+
+    def test_index_for_hex(self):
+        """Test __index__ method allows use with hex()."""
+        addr = Address(callsign="W2FBI")
+        assert hex(addr) == "0x161ae1f"
+
+    def test_index_for_bin(self):
+        """Test __index__ method allows use with bin()."""
+        addr = Address(callsign="W2FBI")
+        result = bin(addr)
+        assert result.startswith("0b")
+
+    def test_repr(self):
+        """Test __repr__ method."""
+        addr = Address(callsign="W2FBI")
+        r = repr(addr)
+        assert "Address" in r
+        assert "W2FBI" in r
+        assert "0x" in r
+
+    def test_equality_wrong_bytes_length(self):
+        """Test equality with bytes of wrong length returns False."""
+        addr = Address(callsign="W2FBI")
+        assert (addr == b"\x00\x00\x01") is False  # 3 bytes
+
+    def test_equality_invalid_string(self):
+        """Test equality with invalid callsign string returns False."""
+        addr = Address(callsign="W2FBI")
+        # Invalid character should return False, not raise
+        assert (addr == "W2FBI$$") is False
+
+    def test_equality_not_implemented(self):
+        """Test equality with unsupported type."""
+        addr = Address(callsign="W2FBI")
+        # Lists and dicts should return False (via NotImplemented)
+        assert (addr == [1, 2, 3]) is False
+        assert (addr == {"test": 1}) is False
+
+
+class TestHashAddressEdgeCases:
+    """Test hash address edge cases."""
+
+    def test_hash_callsign_too_long(self):
+        """Test hash callsign > 8 chars after # raises error."""
+        with pytest.raises(ValueError, match="Hash callsign too long"):
+            encode_callsign("#ABCDEFGHI")  # 9 chars after #
+
+    def test_hash_callsign_invalid_char(self):
+        """Test hash callsign with invalid char raises error."""
+        with pytest.raises(ValueError, match="Invalid character"):
+            encode_callsign("#TEST$")
+
+
+class TestDecodeAddressErrors:
+    """Test decode_callsign error cases."""
+
+    def test_decode_invalid_address_range(self):
+        """Test decoding address in invalid range raises error."""
+        # Address between HASH_ADDRESS_MAX and BROADCAST_ADDRESS is invalid
+        # HASH_ADDRESS_MAX = 40^9 + 40^8 - 1 = 268,697,599,999
+        # BROADCAST_ADDRESS = 0xFFFFFFFFFFFF = 281,474,976,710,655
+        invalid_addr = HASH_ADDRESS_MAX + 1000
+        with pytest.raises(ValueError, match="Invalid address"):
+            decode_callsign(invalid_addr)

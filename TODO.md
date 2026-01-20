@@ -30,20 +30,23 @@ Remaining work items for pyM17 development.
 
 ### Testing & Quality
 
-- [ ] **Increase test coverage** - Current: 59%, Target: 80%+
+- [ ] **Increase test coverage** - Current: 63%, Target: 80%+
   - [x] Add tests for `m17/codec/viterbi.py` (now 100% coverage)
   - [x] Add tests for `m17/codec/puncture.py` (now 100% coverage)
   - [x] Add tests for `m17/codec/randomize.py` (now 100% coverage)
   - [x] Add tests for `m17/codec/convolutional.py` (now 98% coverage)
+  - [x] Add tests for `m17/codec/golay.py` (now 94% coverage) - 2026-01-20
   - [x] Add tests for `m17/net/` modules (2026-01-20)
     - `net/__init__.py` - 100% coverage
     - `net/reflector.py` - 87% coverage (86 tests)
-    - `net/p2p.py` - 75% coverage
+    - `net/p2p.py` - 100% coverage (16 new tests)
     - `net/client.py` - 89% coverage
     - `net/dht.py` - 46% coverage (kademlia tests skipped if not installed)
-  - [x] Add tests for `m17/frames/packet.py` (78% coverage) - TLE tests added
+  - [x] Add tests for `m17/frames/ip.py` (now 100% coverage) - 51 tests added
+  - [x] Add tests for `m17/frames/packet.py` (now 100% coverage) - 62 tests added
   - [x] Add tests for `m17/frames/stream.py` (now 98% coverage)
   - [x] Add tests for `m17/frames/lich.py` (now 98% coverage)
+  - [x] Add tests for `m17/core/address.py` (now 99% coverage) - 12 tests added
 
 - [x] **Run mypy strict mode** - Fix all type errors
   ```bash
@@ -256,6 +259,15 @@ Remaining work items for pyM17 development.
 - [x] **Digital signatures** - ECDSA secp256r1 for v3.0.0 (`crypto/signature.py`)
 - [x] **BERT frame support** - Bit Error Rate Test frames (`frames/bert.py`)
 - [x] **Test suite expansion** - 518 tests (86 new), 59% coverage
+
+### v0.1.5 - Test Coverage Improvements (2026-01-20)
+
+- [x] **Comprehensive test coverage** - 678 tests (141 new), 63% coverage
+  - `tests/test_ip.py` - 51 new tests for IP frames (100% coverage)
+  - `tests/test_packet.py` - 62 new tests for packet/TLE frames (100% coverage)
+  - `tests/test_golay.py` - 20 new edge case tests (94% coverage)
+  - `tests/test_net.py` - 16 new P2P tests (100% coverage)
+  - `tests/test_core_address.py` - 12 new edge case tests (99% coverage)
 
 ---
 

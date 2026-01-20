@@ -7,6 +7,50 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.5] - 2026-01-20
+
+### Added
+
+- **Comprehensive test coverage improvements** - 141 new tests (678 total)
+  - `tests/test_ip.py` - 51 new tests for IP frame functionality
+    - Creation, validation, serialization roundtrips
+    - CRC calculation, `is_m17()` static method
+    - `IPFrame.create()` factory method with padding/truncation
+    - Equality comparisons with bytes, int, string
+    - `dict_from_bytes()` legacy method
+  - `tests/test_packet.py` - 62 new tests for packet frames
+    - `PacketChunk` creation, validation, control byte calculations
+    - `PacketFrame` chunking, data extraction, iteration
+    - `TLEPacket` serialization, validation, CRC verification
+    - Non-ASCII handling, warning logging for non-standard TLE
+  - Extended `tests/test_golay.py` - 20 new edge case tests
+    - Multi-bit error correction (2-3 errors in data/parity)
+    - Exhaustive single/double error position testing
+    - Soft decode with flipped bits and uncertainty
+    - LICH decode with noise and edge cases
+  - Extended `tests/test_net.py` - 16 new P2P tests
+    - Message handling (WHERE_AM_I, I_AM_HERE, INTRODUCING)
+    - Poll with M17 frames, JSON messages, invalid data
+    - Lookup cache hit/miss, connection lifecycle
+    - Frame sending, hole punching, auto-reregistration
+  - Extended `tests/test_core_address.py` - 12 new edge case tests
+    - Invalid bytes length, out-of-range addresses
+    - `__index__` for hex()/bin(), `__repr__`
+    - Equality edge cases (wrong bytes length, invalid strings)
+    - Hash address encoding/decoding errors
+
+### Changed
+
+- **Test coverage significantly improved**
+  - `codec/golay.py`: 66% → 94%
+  - `frames/ip.py`: 75% → 100%
+  - `frames/packet.py`: 78% → 100%
+  - `net/p2p.py`: 75% → 100%
+  - `core/address.py`: 89% → 99%
+  - Overall coverage: 59% → 63%
+
+---
+
 ## [0.1.4] - 2026-01-20
 
 ### Added
