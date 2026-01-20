@@ -70,9 +70,9 @@ pip install m17[all]
 ### From Source
 
 ```bash
-git clone https://github.com/your-repo/pyM17.git
+git clone https://github.com/M17-Project/pyM17.git
 cd pyM17/src/m17
-pip install -e .
+poetry install        # or: pip install -e .
 ```
 
 ## Quick Start
@@ -209,6 +209,67 @@ print(PacketProtocol.APRS)    # 0x02
 print(PacketProtocol.TLE)     # 0x07
 ```
 
+### Encryption (requires `cryptography`)
+
+```python
+from m17.crypto.scrambler import Scrambler, ScramblerMode
+from m17.crypto.aes import AESEncryptor, AESMode
+
+# Scrambler encryption (8/16/24-bit LFSR)
+scrambler = Scrambler(mode=ScramblerMode.BIT_24)
+seed = b"\x12\x34\x56"
+ciphertext = scrambler.encrypt(b"Hello M17!", seed)
+plaintext = scrambler.decrypt(ciphertext, seed)
+
+# AES encryption (128/192/256-bit CTR mode)
+encryptor = AESEncryptor(mode=AESMode.AES_256)
+key = bytes(32)  # 256-bit key
+meta_iv = bytes(14)  # From META field
+frame_number = 0
+
+ciphertext = encryptor.encrypt(b"Voice data", key, meta_iv, frame_number)
+plaintext = encryptor.decrypt(ciphertext, key, meta_iv, frame_number)
+```
+
+### Digital Signatures (requires `cryptography`)
+
+```python
+from m17.crypto.signature import SigningKey, generate_keypair, sign_message, verify_signature
+
+# Generate keypair
+sk = SigningKey.generate()
+vk = sk.verifying_key
+
+# Sign and verify
+message = b"Authenticated transmission"
+signature = sk.sign(message)
+is_valid = vk.verify(message, signature)  # True
+
+# Convenience functions
+private_key, public_key = generate_keypair()
+signature = sign_message(message, private_key)
+is_valid = verify_signature(message, signature, public_key)
+```
+
+### BERT (Bit Error Rate Test)
+
+```python
+from m17.frames.bert import BERTFrame, BERTGenerator, calculate_ber
+
+# Generate BERT test frame
+bert = BERTFrame.generate(seed=0x1FF)
+rf_data = bert.encode_for_rf()  # 48 bytes with sync word
+
+# At receiver - calculate BER
+received = BERTFrame.from_rf(rf_data)
+expected = BERTFrame.generate(seed=0x1FF)
+ber = received.calculate_ber(expected)
+print(f"BER: {ber:.2%}")  # 0.00%
+
+# Direct BER calculation
+ber = calculate_ber(received_bytes, expected_bytes)
+```
+
 ## Module Structure
 
 ```
@@ -223,7 +284,8 @@ m17/
 │   ├── stream.py   # Stream frames
 │   ├── packet.py   # Packet frames
 │   ├── ip.py       # IP frames
-│   └── lich.py     # LICH handling
+│   ├── lich.py     # LICH handling
+│   └── bert.py     # BERT test frames
 ├── codec/          # FEC layer
 │   ├── golay.py    # Golay(24,12)
 │   ├── convolutional.py
@@ -231,6 +293,10 @@ m17/
 │   ├── puncture.py # P1, P2, P3 patterns
 │   ├── interleave.py
 │   └── randomize.py
+├── crypto/         # Cryptography (optional)
+│   ├── scrambler.py  # LFSR scrambler
+│   ├── aes.py        # AES-CTR encryption
+│   └── signature.py  # ECDSA signatures
 ├── net/            # Networking
 │   ├── reflector.py
 │   ├── dht.py
@@ -251,6 +317,7 @@ m17/
 
 - **Audio**: pycodec2, soundcard, samplerate
 - **DHT**: kademlia, rpcudp
+- **Crypto**: cryptography (for AES encryption and digital signatures)
 
 ### Audio Dependencies
 
@@ -286,14 +353,17 @@ pip install m17[audio]
 ## Testing
 
 ```bash
-# Install dev dependencies
-pip install -e ".[dev]"
+# Install with dev dependencies (using Poetry)
+poetry install
 
 # Run tests
-pytest
+poetry run pytest
 
 # Run with coverage
-pytest --cov=m17 --cov-report=html
+poetry run pytest --cov=m17 --cov-report=html
+
+# Run specific test file
+poetry run pytest tests/test_crypto.py -v
 ```
 
 ## Development
@@ -341,6 +411,8 @@ v3.0.0 additions:
 - Multi-block text META (15 blocks × 13 bytes = 195 bytes max)
 - TLE packet protocol for satellite orbital data
 - Automatic version detection via PAYLOAD field
+- ECDSA digital signatures (secp256r1)
+- Expanded encryption: 8/16/24-bit scrambler, AES-128/192/256
 
 ## License
 
