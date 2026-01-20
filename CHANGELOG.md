@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.4] - 2026-01-20
+
 ### Added
 
 - **Cryptographic Module** (`m17/crypto/`)
@@ -45,6 +47,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Optional dependency** - `cryptography` for AES and digital signatures
   - New extra: `crypto = ["cryptography"]`
   - Updated `all` extra to include cryptography
+
+---
 
 ## [0.1.3] - 2026-01-20
 

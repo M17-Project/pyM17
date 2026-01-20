@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "m17"
-version = "0.1.3"
+version = "0.1.4"
 description = "Python M17 Protocol Library - M17 v2.0.3 and v3.0.0 compliant"
 authors = ["Luke Stamm <we3dz@we3dz.com>"]
 readme = "../../README.md"

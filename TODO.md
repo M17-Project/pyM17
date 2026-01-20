@@ -249,6 +249,14 @@ Remaining work items for pyM17 development.
   - `DHTConfig.bootstrap_nodes` and `P2PManager.primaries` now required parameters
   - `get_reflector_host()` and `m17ref_name2host()` now require explicit domain
 
+### v0.1.4 - Cryptographic Support (2026-01-20)
+
+- [x] **Scrambler encryption** - 8/16/24-bit LFSR cipher (`crypto/scrambler.py`)
+- [x] **AES encryption** - 128/192/256-bit CTR mode (`crypto/aes.py`)
+- [x] **Digital signatures** - ECDSA secp256r1 for v3.0.0 (`crypto/signature.py`)
+- [x] **BERT frame support** - Bit Error Rate Test frames (`frames/bert.py`)
+- [x] **Test suite expansion** - 518 tests (86 new), 59% coverage
+
 ---
 
 Last updated: 2026-01-20

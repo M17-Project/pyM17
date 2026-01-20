@@ -38,6 +38,12 @@ A Python library for the M17 digital radio protocol, compliant with M17 specific
   - Kademlia DHT for distributed routing
   - P2P connections with NAT traversal
 
+- **Cryptography** (optional)
+  - Scrambler encryption (8/16/24-bit LFSR)
+  - AES encryption (128/192/256-bit CTR mode)
+  - ECDSA digital signatures (secp256r1) for v3.0.0
+  - BERT (Bit Error Rate Test) frame support
+
 - **Audio** (optional)
   - Codec2 integration for voice encoding
   - Audio I/O processing blocks
@@ -53,6 +59,9 @@ pip install m17[audio]
 
 # With DHT networking
 pip install m17[dht]
+
+# With cryptography (AES, digital signatures)
+pip install m17[crypto]
 
 # All optional dependencies
 pip install m17[all]
