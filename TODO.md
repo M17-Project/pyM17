@@ -193,8 +193,9 @@ Remaining work items for pyM17 development.
 3. **Audio module dependencies** - pycodec2 installation can be problematic
    on some platforms. Need to document build requirements.
 
-4. **Test flakiness** - Some tests use random data (`example_bytes()`). Consider
-   using fixed seeds for reproducibility.
+4. ~~**Test flakiness**~~ - **FIXED (2026-01-20)**: Added `tests/conftest.py`
+   with `seed_random` fixture (autouse) that sets `random.seed(42)` before each
+   test, ensuring `example_bytes()` and other random data is reproducible.
 
 5. **M17 v3.0.0 spec is WIP** - The v3.0.0 specification is still being finalized.
    Implementation may need updates when the spec is released. Track changes at
