@@ -121,6 +121,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `m17/voipsim.py` → use `python -m m17.apps voipsim`
   - `m17/sanity_check.py` → use `poetry install -E audio`
 
+- **`LICHFrame` class deprecated** (`frames/lich.py`)
+  - Use `LinkSetupFrame` instead - both represent the same 28-byte structure
+  - `LICHChunk` and `LICHCollector` remain useful for stream frame processing
+  - Will be removed in v1.0
+
+### Documentation
+
+- **Added Codec2 installation instructions** to README.md
+  - Platform-specific instructions for Debian/Ubuntu, Fedora/RHEL, macOS
+  - Build-from-source instructions for other platforms
+
 ---
 
 ## [0.1.2] - 2026-01-18

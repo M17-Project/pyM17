@@ -243,6 +243,37 @@ m17/
 - **Audio**: pycodec2, soundcard, samplerate
 - **DHT**: kademlia, rpcudp
 
+### Audio Dependencies
+
+The audio module requires [pycodec2](https://github.com/gregorias/pycodec2), which depends on the Codec2 C library. Install Codec2 first:
+
+**Debian/Ubuntu:**
+```bash
+sudo apt install codec2 libcodec2-dev
+```
+
+**Fedora/RHEL:**
+```bash
+sudo dnf install codec2 codec2-devel
+```
+
+**macOS (Homebrew):**
+```bash
+brew install codec2
+```
+
+**From source:**
+```bash
+git clone https://github.com/drowe67/codec2.git
+cd codec2 && mkdir build && cd build
+cmake .. && make && sudo make install
+```
+
+Then install pyM17 with audio support:
+```bash
+pip install m17[audio]
+```
+
 ## Testing
 
 ```bash

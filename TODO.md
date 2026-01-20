@@ -190,8 +190,9 @@ Remaining work items for pyM17 development.
 2. ~~**Network module debug code**~~ - **FIXED (2026-01-19)**: All debug prints
    replaced with proper logging. Hardcoded `logging.basicConfig` removed.
 
-3. **Audio module dependencies** - pycodec2 installation can be problematic
-   on some platforms. Need to document build requirements.
+3. ~~**Audio module dependencies**~~ - **FIXED (2026-01-20)**: Added comprehensive
+   Codec2 installation instructions to README.md for Debian/Ubuntu, Fedora/RHEL,
+   macOS, and building from source.
 
 4. ~~**Test flakiness**~~ - **FIXED (2026-01-20)**: Added `tests/conftest.py`
    with `seed_random` fixture (autouse) that sets `random.seed(42)` before each
@@ -205,9 +206,10 @@ Remaining work items for pyM17 development.
    replaced with `while True:` in blocks.py (26), network.py (3), apps.py (1),
    audio_test.py (1). No `raise (...)` with unnecessary parentheses found.
 
-7. **LSF/LICH code duplication** - `frames/lsf.py` and `frames/lich.py` both
-   represent the same 28-byte structure with conversion methods between them.
-   Creates maintenance burden.
+7. ~~**LSF/LICH code duplication**~~ - **ADDRESSED (2026-01-20)**: Added deprecation
+   warning to `LICHFrame` class pointing users to `LinkSetupFrame`. The `LICHChunk`
+   and `LICHCollector` classes remain useful for stream frame processing. Full
+   removal scheduled for v1.0.
 
 ## Completed
 

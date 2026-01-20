@@ -8,11 +8,18 @@ Over 5 consecutive frames, the complete LSF can be reconstructed.
 
 For RF transmission, each 48-bit (6-byte) LICH chunk is encoded
 with Golay(24,12) to produce 96 bits of protected data.
+
+.. note::
+    The :class:`LICHFrame` class is a legacy wrapper around :class:`LinkSetupFrame`.
+    For new code, prefer using :class:`LinkSetupFrame` directly. The LICH chunking
+    functionality (:class:`LICHChunk`, :class:`LICHCollector`) remains useful for
+    stream frame processing.
 """
 
 from __future__ import annotations
 
 import struct
+import warnings
 from dataclasses import dataclass, field
 from typing import Optional
 
@@ -61,17 +68,30 @@ class LICHChunk:
 class LICHFrame:
     """LICH Frame (Link Information Channel).
 
-    This is the legacy name for what is essentially the Link Setup Frame
-    when used in the context of stream frame LICH chunks.
+    .. deprecated:: 0.1.3
+        Use :class:`LinkSetupFrame` instead. This class is maintained for
+        backward compatibility and will be removed in v1.0.
 
-    Maintained for backward compatibility with existing code.
+        Migration example::
+
+            # Old (deprecated)
+            lich = LICHFrame(dst="W2FBI", src="N0CALL", stream_type=0x0005)
+
+            # New (preferred)
+            lsf = LinkSetupFrame(dst="W2FBI", src="N0CALL", type_field=0x0005)
+
+    This is a legacy wrapper around :class:`LinkSetupFrame`. Both classes
+    represent the same 28-byte structure used in M17 streams.
+
+    For LICH chunk operations (splitting/collecting during stream transmission),
+    use :class:`LICHCollector` with :class:`LinkSetupFrame`.
 
     Attributes
     ----------
         dst: Destination address.
         src: Source address.
-        stream_type: TYPE field value.
-        nonce: META/nonce field (14 bytes).
+        stream_type: TYPE field value (maps to LinkSetupFrame.type_field).
+        nonce: META/nonce field (14 bytes, maps to LinkSetupFrame.meta).
     """
 
     dst: Address
@@ -84,6 +104,13 @@ class LICHFrame:
 
     def __post_init__(self) -> None:
         """Validate and normalize fields."""
+        # Emit deprecation warning
+        warnings.warn(
+            "LICHFrame is deprecated and will be removed in v1.0. " "Use LinkSetupFrame instead.",
+            DeprecationWarning,
+            stacklevel=3,
+        )
+
         # Convert string callsigns to Address if needed
         if isinstance(self.dst, str):
             object.__setattr__(self, "dst", Address(callsign=self.dst))
