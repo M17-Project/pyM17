@@ -6,7 +6,9 @@ import pytest
 from m17.codec.interleave import (
     INTERLEAVE_SEQ,
     deinterleave,
+    deinterleave_soft,
     interleave,
+    interleave_soft,
 )
 
 
@@ -115,3 +117,44 @@ class TestInterleaveWithSoftBits:
         interleaved = interleave(inp)
         recovered = deinterleave(interleaved)
         assert recovered == inp
+
+
+class TestSoftBitAliases:
+    """Test soft bit alias functions."""
+
+    def test_interleave_soft_function(self):
+        """Test interleave_soft is an alias for interleave."""
+        inp = list(range(368))
+        result1 = interleave(inp)
+        result2 = interleave_soft(inp)
+        assert result1 == result2
+
+    def test_deinterleave_soft_function(self):
+        """Test deinterleave_soft is an alias for deinterleave."""
+        inp = list(range(368))
+        result1 = deinterleave(inp)
+        result2 = deinterleave_soft(inp)
+        assert result1 == result2
+
+    def test_interleave_soft_with_soft_values(self):
+        """Test interleave_soft with typical soft decision values."""
+        # Soft bits: 0x0000 = strong 0, 0xFFFF = strong 1, 0x7FFF = uncertain
+        inp = [0x0000 if i % 3 == 0 else (0xFFFF if i % 3 == 1 else 0x7FFF) for i in range(368)]
+        result = interleave_soft(inp)
+        assert len(result) == 368
+        # Verify values are preserved
+        assert sorted(result) == sorted(inp)
+
+    def test_deinterleave_soft_with_soft_values(self):
+        """Test deinterleave_soft with typical soft decision values."""
+        inp = [0x0000 if i % 2 == 0 else 0xFFFF for i in range(368)]
+        interleaved = interleave_soft(inp)
+        recovered = deinterleave_soft(interleaved)
+        assert recovered == inp
+
+    def test_soft_roundtrip(self):
+        """Test full soft bit roundtrip using alias functions."""
+        original = [i * 100 for i in range(368)]  # Varying soft values
+        interleaved = interleave_soft(original)
+        recovered = deinterleave_soft(interleaved)
+        assert recovered == original

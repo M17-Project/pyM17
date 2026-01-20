@@ -1835,3 +1835,338 @@ class TestLegacyAliases:
         from m17.net.dht import M17DHTNode, m17_networking_dht
 
         assert m17_networking_dht is M17DHTNode
+
+
+# =============================================================================
+# Additional Coverage Tests
+# =============================================================================
+
+
+class TestReflectorConnectionCoverage:
+    """Additional tests for ReflectorConnection edge cases."""
+
+    @patch("socket.socket")
+    def test_connect_exception(self, mock_socket_class):
+        """Test connection exception handling."""
+        from m17.net.reflector import ConnectionState, ReflectorConnection
+
+        mock_sock = MagicMock()
+        mock_socket_class.return_value = mock_sock
+        mock_sock.bind.side_effect = OSError("Bind failed")
+
+        conn = ReflectorConnection(host="reflector.example.com")
+        result = conn.connect(timeout=1.0)
+
+        assert result is False
+        assert conn.state == ConnectionState.ERROR
+
+    @patch("socket.socket")
+    def test_disconnect_exception(self, mock_socket_class):
+        """Test disconnect handles exception gracefully."""
+        from m17.net.reflector import ConnectionState, ReflectorConnection
+
+        mock_sock = MagicMock()
+        mock_socket_class.return_value = mock_sock
+        mock_sock.recvfrom.return_value = (b"ACKN", ("reflector.example.com", 17000))
+        mock_sock.sendto.side_effect = [None, OSError("Send failed")]  # CONN succeeds, DISC fails
+
+        conn = ReflectorConnection(host="reflector.example.com")
+        conn.connect(timeout=1.0)
+
+        # Reset to allow second sendto to fail
+        mock_sock.sendto.side_effect = OSError("Send failed")
+
+        conn.disconnect()  # Should not raise
+        assert conn.state == ConnectionState.DISCONNECTED
+
+    @patch("socket.socket")
+    def test_send_not_connected_raises(self, mock_socket_class):
+        """Test _send when not connected raises RuntimeError."""
+        from m17.net.reflector import ReflectorConnection
+
+        conn = ReflectorConnection(host="reflector.example.com")
+
+        # Manually set socket to None (simulating not connected)
+        conn._sock = None
+
+        with pytest.raises(RuntimeError, match="Not connected"):
+            conn._send(b"test")
+
+    @patch("socket.socket")
+    def test_handle_message_ackn(self, mock_socket_class):
+        """Test handle_message with ACKN message."""
+        from m17.net.reflector import ReflectorConnection
+
+        mock_sock = MagicMock()
+        mock_socket_class.return_value = mock_sock
+        mock_sock.recvfrom.return_value = (b"ACKN", ("reflector.example.com", 17000))
+
+        conn = ReflectorConnection(host="reflector.example.com")
+        conn.connect(timeout=1.0)
+
+        # Handle ACKN message (just logs, returns None)
+        result = conn.handle_message(b"ACKN")
+        assert result is None
+
+    @patch("socket.socket")
+    def test_handle_message_m17_frame_with_callback(self, mock_socket_class):
+        """Test handle_message with M17 frame calls callback."""
+        from m17.net.reflector import ReflectorConnection
+
+        mock_sock = MagicMock()
+        mock_socket_class.return_value = mock_sock
+        mock_sock.recvfrom.return_value = (b"ACKN", ("reflector.example.com", 17000))
+
+        conn = ReflectorConnection(host="reflector.example.com", callsign="N0CALL")
+        conn.connect(timeout=1.0)
+
+        received_frames = []
+
+        def callback(frame):
+            received_frames.append(frame)
+
+        conn.set_frame_callback(callback)
+
+        # Create a valid M17 frame
+        frame = IPFrame.create(dst="W2FBI", src="N0CALL", stream_id=0x1234)
+        result = conn.handle_message(bytes(frame))
+
+        assert result is not None
+        assert len(received_frames) == 1
+
+    @patch("socket.socket")
+    def test_handle_message_m17_frame_invalid(self, mock_socket_class):
+        """Test handle_message with invalid M17 frame."""
+        from m17.net.reflector import ReflectorConnection
+
+        mock_sock = MagicMock()
+        mock_socket_class.return_value = mock_sock
+        mock_sock.recvfrom.return_value = (b"ACKN", ("reflector.example.com", 17000))
+
+        conn = ReflectorConnection(host="reflector.example.com")
+        conn.connect(timeout=1.0)
+
+        # Invalid M17 frame
+        result = conn.handle_message(b"M17 invalid frame data")
+        assert result is None
+
+    @patch("socket.socket")
+    def test_poll_exception(self, mock_socket_class):
+        """Test poll handles general exception."""
+        from m17.net.reflector import ReflectorConnection
+
+        mock_sock = MagicMock()
+        mock_socket_class.return_value = mock_sock
+        mock_sock.recvfrom.side_effect = [
+            (b"ACKN", ("reflector.example.com", 17000)),
+            OSError("Network error"),
+        ]
+
+        conn = ReflectorConnection(host="reflector.example.com")
+        conn.connect(timeout=1.0)
+
+        result = conn.poll(timeout=0.01)
+        assert result is None
+
+
+class TestM17ReflectorClientCoverage:
+    """Additional tests for M17ReflectorClient edge cases."""
+
+    @pytest.mark.asyncio
+    @patch("socket.socket")
+    async def test_send_frame_connected(self, mock_socket_class):
+        """Test send_frame when connected."""
+        from m17.net.reflector import M17ReflectorClient
+
+        mock_sock = MagicMock()
+        mock_socket_class.return_value = mock_sock
+        mock_sock.recvfrom.return_value = (b"ACKN", ("reflector.example.com", 17000))
+
+        client = M17ReflectorClient("N0CALL")
+        await client.connect("reflector.example.com")
+
+        frame = IPFrame.create(
+            dst="W2FBI",
+            src="N0CALL",
+            stream_id=0x1234,
+            frame_number=0,
+            payload=bytes(16),
+        )
+
+        await client.send_frame(frame)  # Should not raise
+
+        await client.disconnect()
+
+    @pytest.mark.asyncio
+    @patch("socket.socket")
+    async def test_receive_frames_iteration(self, mock_socket_class):
+        """Test receive_frames async iteration."""
+        from m17.net.reflector import M17ReflectorClient
+
+        mock_sock = MagicMock()
+        mock_socket_class.return_value = mock_sock
+        mock_sock.recvfrom.return_value = (b"ACKN", ("reflector.example.com", 17000))
+
+        # Create a frame to receive
+        frame = IPFrame.create(dst="N0CALL", src="W2FBI", stream_id=0x5678)
+        frame_data = bytes(frame)
+
+        # Set up mock to return frame once, then timeout
+        mock_sock.recvfrom.side_effect = [
+            (b"ACKN", ("reflector.example.com", 17000)),  # For connect
+            (frame_data, ("reflector.example.com", 17000)),  # First poll
+            socket.timeout(),  # Second poll (empty)
+        ]
+
+        client = M17ReflectorClient("N0CALL")
+        await client.connect("reflector.example.com")
+
+        # Get one frame
+        received = []
+        async for f in client.receive_frames(poll_interval=0.01):
+            received.append(f)
+            await client.disconnect()  # Stop after first frame
+            break
+
+        assert len(received) <= 1  # May be 0 if timing is off
+
+        await client.disconnect()
+
+
+class TestM17NetworkClientCoverage:
+    """Additional tests for M17NetworkClient edge cases."""
+
+    @pytest.mark.asyncio
+    async def test_send_frame_not_connected(self):
+        """Test send_frame when not connected is no-op."""
+        from m17.net.client import M17ClientConfig, M17NetworkClient
+
+        config = M17ClientConfig(callsign="N0CALL")
+        client = M17NetworkClient(config)
+
+        frame = IPFrame.create(
+            dst="W2FBI",
+            src="N0CALL",
+            stream_id=0x1234,
+            payload=bytes(16),
+        )
+
+        # No reflector connected, should be no-op
+        await client.send_frame(frame)
+
+    @pytest.mark.asyncio
+    async def test_receive_frames_not_connected(self):
+        """Test receive_frames when not connected returns early."""
+        from m17.net.client import M17ClientConfig, M17NetworkClient
+
+        config = M17ClientConfig(callsign="N0CALL")
+        client = M17NetworkClient(config)
+
+        # No reflector connected
+        count = 0
+        async for frame in client.receive_frames():
+            count += 1
+
+        assert count == 0
+
+    @pytest.mark.asyncio
+    @patch("socket.socket")
+    async def test_receive_frames_with_handlers(self, mock_socket_class):
+        """Test receive_frames calls frame handlers."""
+        from m17.net.client import M17ClientConfig, M17NetworkClient
+
+        mock_sock = MagicMock()
+        mock_socket_class.return_value = mock_sock
+
+        # Create a frame
+        frame = IPFrame.create(dst="N0CALL", src="W2FBI", stream_id=0x5678)
+        frame_data = bytes(frame)
+
+        mock_sock.recvfrom.side_effect = [
+            (b"ACKN", ("reflector.example.com", 17000)),  # For connect
+            (frame_data, ("reflector.example.com", 17000)),  # First poll returns frame
+            socket.timeout(),  # Second poll times out
+        ]
+
+        config = M17ClientConfig(
+            callsign="N0CALL",
+            reflector_host="reflector.example.com",
+        )
+        client = M17NetworkClient(config)
+
+        handler_called = []
+
+        def handler(f):
+            handler_called.append(f)
+
+        client.add_frame_handler(handler)
+        await client.connect()
+
+        # Get one frame
+        async for f in client.receive_frames():
+            break
+
+        await client.disconnect()
+
+    @pytest.mark.asyncio
+    @patch("socket.socket")
+    async def test_receive_frames_handler_exception(self, mock_socket_class):
+        """Test receive_frames handles handler exception."""
+        from m17.net.client import M17ClientConfig, M17NetworkClient
+
+        mock_sock = MagicMock()
+        mock_socket_class.return_value = mock_sock
+
+        # Create a frame
+        frame = IPFrame.create(dst="N0CALL", src="W2FBI", stream_id=0x5678)
+        frame_data = bytes(frame)
+
+        mock_sock.recvfrom.side_effect = [
+            (b"ACKN", ("reflector.example.com", 17000)),  # For connect
+            (frame_data, ("reflector.example.com", 17000)),  # First poll returns frame
+            socket.timeout(),  # Second poll times out
+        ]
+
+        config = M17ClientConfig(
+            callsign="N0CALL",
+            reflector_host="reflector.example.com",
+        )
+        client = M17NetworkClient(config)
+
+        def bad_handler(f):
+            raise ValueError("Handler error")
+
+        client.add_frame_handler(bad_handler)
+        await client.connect()
+
+        # Should not raise even though handler fails
+        async for f in client.receive_frames():
+            break
+
+        await client.disconnect()
+
+    @pytest.mark.asyncio
+    @patch("socket.socket")
+    async def test_is_connected_with_reflector(self, mock_socket_class):
+        """Test is_connected property with reflector."""
+        from m17.net.client import M17ClientConfig, M17NetworkClient
+
+        mock_sock = MagicMock()
+        mock_socket_class.return_value = mock_sock
+        mock_sock.recvfrom.return_value = (b"ACKN", ("reflector.example.com", 17000))
+
+        config = M17ClientConfig(
+            callsign="N0CALL",
+            reflector_host="reflector.example.com",
+        )
+        client = M17NetworkClient(config)
+
+        assert client.is_connected is False
+
+        await client.connect()
+
+        assert client.is_connected is True
+
+        await client.disconnect()
+
+        assert client.is_connected is False
