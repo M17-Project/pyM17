@@ -1,5 +1,8 @@
 # pyM17
 
+[![CI](https://github.com/M17-Project/pyM17/actions/workflows/ci.yml/badge.svg)](https://github.com/M17-Project/pyM17/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/M17-Project/pyM17/branch/main/graph/badge.svg)](https://codecov.io/gh/M17-Project/pyM17)
+
 > **Note:** This library is under active development and the API may change. Not recommended for production use yet.
 
 A Python library for the M17 digital radio protocol, compliant with M17 specification v2.0.3 and v3.0.0 (WIP).

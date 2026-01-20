@@ -109,6 +109,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Per-file ignores for legacy deprecated modules
     - Relaxed docstring rules for test files
     - Compatible docstring style settings (D211/D212)
+  - README badges for CI status and code coverage
 
 ### Deprecated
 
