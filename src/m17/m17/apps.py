@@ -460,7 +460,7 @@ def modular(config: DictDotAttribute, chains: list[list[Any]]) -> None:
             inq = outq
     try:
         procs = modules["processes"]
-        while 1:
+        while True:
             if any(not p["process"].is_alive() for p in procs):
                 logger.warning("Lost a client process")
                 break

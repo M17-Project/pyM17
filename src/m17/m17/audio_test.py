@@ -29,7 +29,7 @@ def audio_test_soundcard(mode: Union[int, str]) -> NoReturn:
     with default_mic.recorder(**sc_config, channels=1) as mic, default_speaker.player(
         **sc_config, channels=1
     ) as sp:
-        while 1:
+        while True:
             audio = mic.record(numframes=conrate)  # .transpose()
             audio = audio.flatten()
             audio = audio * 32767

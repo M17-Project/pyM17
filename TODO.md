@@ -200,9 +200,9 @@ Remaining work items for pyM17 development.
    Implementation may need updates when the spec is released. Track changes at
    the M17_spec repository dev branch.
 
-6. **Code style inconsistencies** - `while 1:` instead of `while True:` in
-   `blocks.py`. `raise (NotImplementedError)` with unnecessary parentheses
-   throughout several modules.
+6. ~~**Code style inconsistencies**~~ - **FIXED (2026-01-20)**: All `while 1:`
+   replaced with `while True:` in blocks.py (26), network.py (3), apps.py (1),
+   audio_test.py (1). No `raise (...)` with unnecessary parentheses found.
 
 7. **LSF/LICH code duplication** - `frames/lsf.py` and `frames/lich.py` both
    represent the same 28-byte structure with conversion methods between them.

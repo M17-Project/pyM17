@@ -164,7 +164,7 @@ class m17_networking_direct:
         sendq: queue.Queue[tuple[bytes, tuple[str, int]]],
     ) -> None:
         """ """
-        while 1:
+        while True:
             try:
                 data, conn = self.sock.recvfrom(1500)
                 logger.debug("RECV %s %s", conn, data)
@@ -179,7 +179,7 @@ class m17_networking_direct:
 
     def loop(self) -> None:
         def looper(self: m17_networking_direct) -> None:
-            while 1:
+            while True:
                 self.loop_once()
                 time.sleep(0.005)
 
@@ -484,7 +484,7 @@ if __name__ == "__main__":
         server = Server()
         loop.run_until_complete(server.listen(8468))
         try:
-            while 1:
+            while True:
                 logger.debug("DHT server loop iteration")
                 loop_once(loop)
                 time.sleep(0.5)

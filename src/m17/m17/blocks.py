@@ -33,7 +33,7 @@ def codeblock(callback: Callable[[Any], Any]) -> BlockFunction:
         config: Any, inq: multiprocessing.Queue[Any], outq: multiprocessing.Queue[Any]
     ) -> NoReturn:
         """The block itself"""
-        while 1:
+        while True:
             x = inq.get()
             y = callback(x)
             outq.put(y)
@@ -57,7 +57,7 @@ def udp_server(
         sock.setblocking(False)
         active_connections: dict[tuple[str, int], float] = {}
         timeout = 30
-        while 1:
+        while True:
             active_connections = {
                 k: v for k, v in active_connections.items() if v + timeout < time.time()
             }
@@ -81,7 +81,7 @@ def zeros(size: int, dtype: str, rate: float) -> BlockFunction:
         config: Any, inq: multiprocessing.Queue[Any], outq: multiprocessing.Queue[Any]
     ) -> NoReturn:
         """The block itself"""
-        while 1:
+        while True:
             outq.put(numpy.zeros(size, dtype))
             time.sleep(1 / rate)
 
@@ -125,7 +125,7 @@ class M17ReflectorClientBlocks:
         conn: tuple[str, int] = (host, port)
         refcon = network.n7tae_reflector_conn(sock, conn, mycall, theirmodule)
         refcon.connect()
-        while 1:
+        while True:
             try:
                 bs, conn = sock.recvfrom(1500)
                 logger.debug("RECV %s", bs)
@@ -152,7 +152,7 @@ class M17ReflectorClientBlocks:
         def fn(
             config: Any, inq: multiprocessing.Queue[Any], outq: multiprocessing.Queue[Any]
         ) -> NoReturn:
-            while 1:
+            while True:
                 if direction == "in":
                     self.qs[name].put(inq.get())
                 elif direction == "out":
@@ -178,7 +178,7 @@ def null(
     (Probably used after tee() or teefile() if you just want to collect
     data with those and not do further processing on the data stream)
     """
-    while 1:
+    while True:
         x = inq.get()
 
 
@@ -192,7 +192,7 @@ def tee(header: str) -> BlockFunction:
     def fn(
         config: Any, inq: multiprocessing.Queue[Any], outq: multiprocessing.Queue[Any]
     ) -> NoReturn:
-        while 1:
+        while True:
             x = inq.get()
             if type(x) == bytes:
                 logger.debug("%s %s", header, print_hex(x))
@@ -238,7 +238,7 @@ def ffmpeg(ffmpeg_url: str) -> BlockFunction:
             stdin=PIPE,
             stderr=PIPE,
         )
-        while 1:
+        while True:
             try:
                 # audio = inq.get_nowait()
                 audio = inq.get()
@@ -295,7 +295,7 @@ def throttle(n_per_second: float) -> BlockFunction:
         config: Any, inq: multiprocessing.Queue[Any], outq: multiprocessing.Queue[Any]
     ) -> NoReturn:
         last_send = 0.0
-        while 1:
+        while True:
             x = inq.get()
             now = time.time()
             elapsed = now - last_send
@@ -318,7 +318,7 @@ def delay(size: int) -> BlockFunction:
         config: Any, inq: multiprocessing.Queue[Any], outq: multiprocessing.Queue[Any]
     ) -> NoReturn:
         fifo: list[Any] = []
-        while 1:
+        while True:
             x = inq.get()
             fifo.insert(0, x)
             if len(fifo) > size:
@@ -334,7 +334,7 @@ def ptt(config: Any, inq: multiprocessing.Queue[Any], outq: multiprocessing.Queu
     Redo this to take a check function as a parameter and close around
     that instead of using config
     """
-    while 1:
+    while True:
         x = inq.get()
         if config.ptt.poll():  # this will check for every single packet
             outq.put(x)
@@ -348,7 +348,7 @@ def vox(config: Any, inq: multiprocessing.Queue[Any], outq: multiprocessing.Queu
     """
     last: Any = None
     repeat_count = 0
-    while 1:
+    while True:
         x = inq.get()
         if x == last:
             repeat_count += 1
@@ -374,7 +374,7 @@ def mic_audio(
     # print(default_mic)
     conrate = config.codec2.conrate
     with default_mic.recorder(samplerate=8000, channels=1, blocksize=conrate) as mic:
-        while 1:
+        while True:
             audio = mic.record(numframes=conrate)
             # we get "interleaved" floats out of here, in a numpy column ([[][][]])(hence the flatten even though it's a single audio channel)
             audio = audio.flatten() * 32767  # scales from -1,1 to signed 16bit int values
@@ -406,7 +406,7 @@ def spkr_audio(
     with default_speaker.player(samplerate=8000, channels=1) as sp:
         buf: list[Any] = []  # allow for playing chunks of audio even when computer is slow
         buflen = 0  # 0 is dont use
-        while 1:
+        while True:
             # if we stop receiving audio because someone stops transmitting,
             # we wont get anything off the queue, so we can't block (hence nowait)
             try:
@@ -433,7 +433,7 @@ def tobytes(
     config: Any, inq: multiprocessing.Queue[Any], outq: multiprocessing.Queue[Any]
 ) -> NoReturn:
     """Convert everything passing through to bytes, just what it says on the tin"""
-    while 1:
+    while True:
         outq.put(bytes(inq.get()))
 
 
@@ -451,7 +451,7 @@ def m17frame(
         streamtype=5,  # TODO need to set this based on codec2 settings too to support c2.1600
         nonce=b"\xbe\xef\xf0\x0d" + b"a" * 10,
     )
-    while 1:
+    while True:
         plen = 16  # TODO grab from the framer itself
         # need 16 bytes for M17 payload, each element on q should be 8 bytes if c2.3200
         # this will fail in funny ways if our c2 payloads dont fit exactly on byte boundaries
@@ -469,7 +469,7 @@ def m17parse(
     config: Any, inq: multiprocessing.Queue[Any], outq: multiprocessing.Queue[Any]
 ) -> NoReturn:
     """Parse incoming bytes into M17 ipFrames"""
-    while 1:
+    while True:
         f = IPFrame.from_bytes(inq.get())
         if "verbose" in config and config.verbose:
             logger.debug("Parsed M17 frame: %s", f)
@@ -483,7 +483,7 @@ def payload2codec2(
     byteframe = int(
         config.codec2.bitframe / 8
     )  # TODO another place where we assume codec2 frames are byte-sized
-    while 1:
+    while True:
         x = inq.get()
         for c in chunk(x.payload, byteframe):
             assert len(c) == byteframe
@@ -508,7 +508,7 @@ def codec2enc(
     In: 16bit signed shorts, size varies but expects 160 samples for Codec2 3200
     Out: depends on Codec2 mode, but 3200 bps gives 8 bytes per 160 sample raw frame.
     """
-    while 1:
+    while True:
         audio = inq.get()
         c2bits = config.codec2.c2.encode(audio)
         assert len(c2bits) == config.codec2.bitframe / 8
@@ -523,7 +523,7 @@ def codec2dec(
     Out: 16 bit signed shorts, size varies but 160 samples for Codec2 mode 3200
     8khz sample rate, 1 channel (mono audio)
     """
-    while 1:
+    while True:
         c2bits = inq.get()
         audio = config.codec2.c2.decode(c2bits)
         outq.put(audio)
@@ -540,7 +540,7 @@ def udp_send(sendto: tuple[str, int]) -> BlockFunction:
     ) -> NoReturn:
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         sock.setblocking(False)
-        while 1:
+        while True:
             bs = inq.get()
             sock.sendto(bs, sendto)
 
@@ -559,7 +559,7 @@ def udp_recv(port: int) -> BlockFunction:
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         sock.bind(("0.0.0.0", port))
         # sock.setblocking(False)
-        while 1:
+        while True:
             x, conn = sock.recvfrom(1500)
             # 1500 is the maximum packet payload size
 
@@ -579,7 +579,7 @@ def integer_decimate(i: int) -> BlockFunction:
     def fn(
         config: Any, inq: multiprocessing.Queue[Any], outq: multiprocessing.Queue[Any]
     ) -> NoReturn:
-        while 1:
+        while True:
             x = inq.get()
             de = x[::i]
             outq.put(x[::i])
@@ -600,7 +600,7 @@ def integer_interpolate(i: int) -> BlockFunction:
         import samplerate
 
         resampler = samplerate.Resampler("sinc_best", channels=1)
-        while 1:
+        while True:
             x = inq.get()
             y = resampler.process(x, i)
             z = numpy.array(y, dtype="<h")
@@ -618,7 +618,7 @@ def chunker_b(size: int) -> BlockFunction:
         config: Any, inq: multiprocessing.Queue[Any], outq: multiprocessing.Queue[Any]
     ) -> NoReturn:
         buf = b""
-        while 1:
+        while True:
             x = inq.get()
             buf += x
             while len(buf) > size:
@@ -634,7 +634,7 @@ def np_convert(outtype: str) -> BlockFunction:
     def fn(
         config: Any, inq: multiprocessing.Queue[Any], outq: multiprocessing.Queue[Any]
     ) -> NoReturn:
-        while 1:
+        while True:
             x = inq.get()
             y = numpy.frombuffer(x, outtype)
             outq.put(y)
