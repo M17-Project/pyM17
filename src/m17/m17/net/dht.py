@@ -23,7 +23,7 @@ except ImportError:
     HAS_KADEMLIA = False
     Server = None
 
-from m17.core.constants import DEFAULT_DHT_BOOTSTRAP_HOSTS, DEFAULT_DHT_PORT
+from m17.core.constants import DEFAULT_DHT_PORT
 
 __all__ = [
     "M17DHTNode",
@@ -33,11 +33,6 @@ __all__ = [
 
 logger = logging.getLogger(__name__)
 
-# Default bootstrap nodes (from m17.core.constants)
-DEFAULT_BOOTSTRAP_NODES: List[Tuple[str, int]] = [
-    (host, DEFAULT_DHT_PORT) for host in DEFAULT_DHT_BOOTSTRAP_HOSTS
-]
-
 
 @dataclass
 class DHTConfig:
@@ -46,15 +41,20 @@ class DHTConfig:
 
     Attributes:
         port: Local DHT port.
-        bootstrap_nodes: List of (host, port) tuples for bootstrapping.
+        bootstrap_nodes: List of (host, port) tuples for bootstrapping (required).
         registration_interval: Seconds between re-registration.
     """
 
-    port: int = 17001
-    bootstrap_nodes: List[Tuple[str, int]] = field(
-        default_factory=lambda: list(DEFAULT_BOOTSTRAP_NODES)
-    )
+    bootstrap_nodes: List[Tuple[str, int]]
+    port: int = DEFAULT_DHT_PORT
     registration_interval: float = 15.0
+
+    def __post_init__(self) -> None:
+        """Validate configuration."""
+        if not self.bootstrap_nodes:
+            raise ValueError(
+                "bootstrap_nodes is required: list of (host, port) tuples for DHT bootstrapping"
+            )
 
 
 @dataclass

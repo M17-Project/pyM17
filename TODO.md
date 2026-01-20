@@ -228,7 +228,10 @@ Remaining work items for pyM17 development.
 - [x] **Implemented throttle() function** - Rate-limiting for queue processing
 - [x] **Improved stub functions** - Added docstrings and descriptive errors
 - [x] **Added deprecation warnings** - All legacy modules now warn on import
-- [x] **Made server hostnames configurable** - Centralized in core/constants.py
+- [x] **Removed default hostname constants** - No hardcoded hostnames; users must provide explicit configuration
+  - Removed `DEFAULT_PRIMARY_HOST`, `DEFAULT_DHT_BOOTSTRAP_HOSTS`, `DEFAULT_REFLECTOR_DOMAIN`, `DEFAULT_TEST_HOST`
+  - `DHTConfig.bootstrap_nodes` and `P2PManager.primaries` now required parameters
+  - `get_reflector_host()` and `m17ref_name2host()` now require explicit domain
 
 ---
 

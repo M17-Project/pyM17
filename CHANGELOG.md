@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Breaking Changes
+
+- **Removed default hostname constants** (`core/constants.py`)
+  - Removed `DEFAULT_PRIMARY_HOST`, `DEFAULT_DHT_BOOTSTRAP_HOSTS`, `DEFAULT_REFLECTOR_DOMAIN`, `DEFAULT_TEST_HOST`
+  - Hostnames must now be explicitly provided by users - no hardcoded defaults
+  - `get_reflector_host(refname, domain)` now requires `domain` parameter (no default)
+  - `DHTConfig.bootstrap_nodes` is now a required parameter
+  - `P2PManager.primaries` is now a required parameter
+  - `m17ref_name2host(refname, domain)` now requires `domain` parameter
+  - Migration: Pass explicit hostnames where previously defaults were used
+
 ### Security
 
 - **Fixed arbitrary code execution vulnerability** in `misc.py` and `apps.py`
@@ -43,13 +54,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `apps.py` - Configuration and status messages use logging
   - Removed hardcoded `logging.basicConfig(level=DEBUG)` from `network.py`
 
-- **Made server hostnames configurable** (`core/constants.py`)
-  - Added `DEFAULT_PRIMARY_HOST` - Primary M17 server
-  - Added `DEFAULT_DHT_BOOTSTRAP_HOSTS` - DHT bootstrap servers
-  - Added `DEFAULT_REFLECTOR_DOMAIN` - Reflector domain suffix
-  - Added `DEFAULT_TEST_HOST` - Test server for examples
-  - Added `get_reflector_host()` helper function
-  - Updated all modules to use configurable constants instead of hardcoded hostnames
+- **Removed default server hostname constants** (`core/constants.py`)
+  - Removed `DEFAULT_PRIMARY_HOST`, `DEFAULT_DHT_BOOTSTRAP_HOSTS`, `DEFAULT_REFLECTOR_DOMAIN`, `DEFAULT_TEST_HOST`
+  - Updated `get_reflector_host()` to require explicit `domain` parameter
+  - All networking classes now require explicit hostname configuration
 
 - **Implemented `throttle()` function in `blocks.py`**
   - Previously raised `NotImplementedError`
@@ -71,9 +79,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `test_blocks.py` - Audio processing blocks tests
   - `test_integration.py` - Full FEC pipeline and frame roundtrip tests
 
-- **Network configuration constants** (`core/constants.py`)
+- **Network port constants** (`core/constants.py`)
   - `DEFAULT_DHT_PORT` (17001)
-  - Server hostname constants for easy configuration
 
 ### Deprecated
 

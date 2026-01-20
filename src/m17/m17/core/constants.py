@@ -39,11 +39,6 @@ __all__ = [
     "M17_MAGIC_NUMBER",
     "DEFAULT_PORT",
     "DEFAULT_DHT_PORT",
-    # Server hostnames (configurable)
-    "DEFAULT_PRIMARY_HOST",
-    "DEFAULT_DHT_BOOTSTRAP_HOSTS",
-    "DEFAULT_REFLECTOR_DOMAIN",
-    "DEFAULT_TEST_HOST",
     "get_reflector_host",
     # Packet Protocol Identifiers (v3.0.0)
     "PACKET_PROTOCOL_RAW",
@@ -158,39 +153,16 @@ DEFAULT_PORT: int = 17000
 # Default DHT port
 DEFAULT_DHT_PORT: int = 17001
 
-# ============================================================================
-# Default Server Hostnames (configurable)
-# ============================================================================
-# These can be overridden by setting environment variables or using a config file.
-# They represent the default public M17 infrastructure.
-
-# Primary M17 server hostname
-DEFAULT_PRIMARY_HOST: str = "m17.tarxvf.tech"
-
-# DHT bootstrap server hostnames
-DEFAULT_DHT_BOOTSTRAP_HOSTS: list[str] = [
-    "m17dhtboot0.tarxvf.tech",
-    # "m17dhtboot1.tarxvf.tech",  # Reserved for future use
-]
-
-# Reflector domain suffix (reflector names are prepended to this)
-# e.g., "M17-ABC" -> "M17-ABC.m17ref.tarxvf.tech"
-DEFAULT_REFLECTOR_DOMAIN: str = "m17ref.tarxvf.tech"
-
-# Test/example server hostname (for documentation and examples)
-DEFAULT_TEST_HOST: str = "m17tester.tarxvf.tech"
-
-
-def get_reflector_host(refname: str, domain: str = DEFAULT_REFLECTOR_DOMAIN) -> str:
+def get_reflector_host(refname: str, domain: str) -> str:
     """
     Convert a reflector name to a hostname.
 
     Args:
         refname: Reflector name (e.g., "M17-ABC").
-        domain: Reflector domain suffix.
+        domain: Reflector domain suffix (required, e.g., "m17ref.example.com").
 
     Returns:
-        Full hostname (e.g., "M17-ABC.m17ref.tarxvf.tech").
+        Full hostname (e.g., "M17-ABC.m17ref.example.com").
     """
     return f"{refname}.{domain}"
 

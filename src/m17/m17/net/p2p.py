@@ -21,7 +21,7 @@ from enum import IntEnum
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from m17.core.address import Address
-from m17.core.constants import DEFAULT_PRIMARY_HOST, DEFAULT_PORT
+from m17.core.constants import DEFAULT_PORT
 from m17.frames.ip import IPFrame
 
 __all__ = [
@@ -79,15 +79,13 @@ class P2PManager:
 
     Attributes:
         callsign: Local callsign.
+        primaries: List of rendezvous server addresses (required).
         port: Local port.
-        primaries: List of rendezvous server addresses.
     """
 
     callsign: str
+    primaries: List[Tuple[str, int]]
     port: int = DEFAULT_PORT
-    primaries: List[Tuple[str, int]] = field(
-        default_factory=lambda: [(DEFAULT_PRIMARY_HOST, DEFAULT_PORT)]
-    )
 
     _sock: Optional[socket.socket] = field(default=None, init=False)
     _connections: Dict[str, P2PConnection] = field(default_factory=dict, init=False)
@@ -104,6 +102,10 @@ class P2PManager:
 
     def __post_init__(self) -> None:
         """Initialize socket and address."""
+        if not self.primaries:
+            raise ValueError(
+                "primaries is required: list of (host, port) tuples for rendezvous servers"
+            )
         self._callsign_addr = Address.encode(self.callsign)
 
     async def start(self) -> None:

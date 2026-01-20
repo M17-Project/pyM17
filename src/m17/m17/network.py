@@ -37,8 +37,6 @@ from m17.misc import DictDotAttribute
 from m17.core.constants import (
     DEFAULT_PORT,
     DEFAULT_DHT_PORT,
-    DEFAULT_PRIMARY_HOST,
-    DEFAULT_DHT_BOOTSTRAP_HOSTS,
     get_reflector_host,
 )
 
@@ -52,15 +50,22 @@ warnings.warn(
     stacklevel=2,
 )
 
-primaries: List[Tuple[str, int]] = [(f"{DEFAULT_PRIMARY_HOST}.", DEFAULT_PORT)]
-dhtbootstraps: List[Tuple[str, int]] = [
-    (f"{host}.", DEFAULT_DHT_PORT) for host in DEFAULT_DHT_BOOTSTRAP_HOSTS
-]
+primaries: List[Tuple[str, int]] = []  # Must be explicitly configured
+dhtbootstraps: List[Tuple[str, int]] = []  # Must be explicitly configured
 
 
-def m17ref_name2host(refname: str) -> str:
-    """Convert a reflector name to a hostname."""
-    return get_reflector_host(refname)
+def m17ref_name2host(refname: str, domain: str) -> str:
+    """
+    Convert a reflector name to a hostname.
+
+    Args:
+        refname: Reflector name (e.g., "M17-ABC").
+        domain: Reflector domain suffix (required, e.g., "m17ref.example.com").
+
+    Returns:
+        Full hostname (e.g., "M17-ABC.m17ref.example.com").
+    """
+    return get_reflector_host(refname, domain)
 
 class n7tae_reflector_conn:
     def __init__(
@@ -426,20 +431,23 @@ class m17_networking_dht:
 
     """
 
-    def __init__(self, callsign: str, myhost: str, port: int, should_boot: bool = True) -> None:
+    def __init__(
+        self,
+        callsign: str,
+        myhost: str,
+        port: int,
+        bootstrap_nodes: Optional[List[Tuple[str, int]]] = None
+    ) -> None:
         self.callsign = callsign
         self.host = myhost
         self.port = port
-        self.should_boot = should_boot
+        self.bootstrap_nodes = bootstrap_nodes or []
         self.node: Server = Server()
 
     async def run(self) -> None:
         await self.node.listen(self.port)
-        if self.should_boot:
-            bootstrap_nodes = [
-                (host, DEFAULT_DHT_PORT) for host in DEFAULT_DHT_BOOTSTRAP_HOSTS
-            ]
-            await self.node.bootstrap(bootstrap_nodes)
+        if self.bootstrap_nodes:
+            await self.node.bootstrap(self.bootstrap_nodes)
         t1 = asyncio.ensure_future(repeat(15, self.register_me))
         t2 = asyncio.ensure_future(repeat(15, self.check))
 
@@ -491,10 +499,15 @@ if __name__ == "__main__":
     elif sys.argv[1] == "dht":
         callsign = sys.argv[2]
         host = sys.argv[3]
-        # curl ident.me, or should check with dht bootstrapping nodes
-        should_boot = bool(sys.argv[4].lower() in ["true", "yes", "1"])
+        # Parse bootstrap nodes from command line (optional)
+        # Usage: python -m m17.network dht CALLSIGN HOST [bootstrap_host:port ...]
+        bootstrap_nodes: List[Tuple[str, int]] = []
+        for arg in sys.argv[4:]:
+            if ":" in arg:
+                bhost, bport = arg.rsplit(":", 1)
+                bootstrap_nodes.append((bhost, int(bport)))
         loop = asyncio.get_event_loop()
-        x = m17_networking_dht(callsign, host, 17001, should_boot)
+        x = m17_networking_dht(callsign, host, 17001, bootstrap_nodes if bootstrap_nodes else None)
         loop.run_until_complete(x.run())
         loop.set_debug(True)
         loop.run_forever()
