@@ -108,13 +108,8 @@ except ImportError as e:
     logger.debug("Legacy m17.frames imports not available, using StreamFrame: %s", e)
     RegularFrame = StreamFrame
 
-try:
-    from m17.framer import M17IPFramer, M17RFFramer
-except ImportError as e:
-    # Provide stub implementations if framer not available
-    logger.debug("m17.framer module not available: %s", e)
-    M17IPFramer = None  # type: ignore[assignment, misc]
-    M17RFFramer = None  # type: ignore[assignment, misc]
+# Legacy framer classes (deprecated, will be removed in v1.0)
+from m17.framer import M17IPFramer, M17RFFramer
 
 # =============================================================================
 # Public API
