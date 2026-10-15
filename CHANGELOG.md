@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **License changed from MIT to AGPL-3.0** - Added `LICENSE` file (GNU Affero General Public License v3) and updated `pyproject.toml` metadata and README to match
+
 ## [0.1.5] - 2026-01-20
 
 ### Added

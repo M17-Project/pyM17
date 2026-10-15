@@ -4,12 +4,12 @@ version = "0.1.5"
 description = "Python M17 Protocol Library - M17 v2.0.3 and v3.0.0 compliant"
 authors = ["Luke Stamm <we3dz@we3dz.com>"]
 readme = "../../README.md"
-license = "MIT"
+license = "AGPL-3.0-only"
 keywords = ["m17", "amateur-radio", "ham-radio", "digital-voice", "codec2"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
-    "License :: OSI Approved :: MIT License",
+    "License :: OSI Approved :: GNU Affero General Public License v3",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.12",
