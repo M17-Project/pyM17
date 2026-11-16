@@ -5,8 +5,13 @@
 // noisy frames.
 //
 // Build and run from the repository root, with libm17 checked out next to it:
-//   cc -O2 -I../libm17 tools/gen_vectors.c ../libm17/m17.c ../libm17/*/[!u]*.c -o gen_vectors -lm
+//   cc -O2 -ffp-contract=off -I../libm17 tools/gen_vectors.c ../libm17/m17.c ../libm17/*/[!u]*.c -o gen_vectors -lm
 //   ./gen_vectors > tests/vectors.json
+//
+// -ffp-contract=off matters: compilers that target CPUs with FMA (e.g. GitHub's
+// runners) otherwise fuse a + b * c in libm17's slicer and in the noise below,
+// which changes the last bit of floats and the Viterbi metrics by a unit or two.
+// pyM17 rounds every operation separately, like a build without FMA.
 
 #include <stdio.h>
 #include <stdint.h>

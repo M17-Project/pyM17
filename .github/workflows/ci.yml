@@ -54,10 +54,10 @@ jobs:
           cc --version | head -1
           git -C libm17 log -1 --oneline
           git -C gr-m17 log -1 --oneline
-          cc -O2 -Ilibm17 tools/gen_vectors.c libm17/m17.c $(ls libm17/*/*.c | grep -v unit_tests) -o gen_vectors -lm
+          cc -O2 -ffp-contract=off -Ilibm17 tools/gen_vectors.c libm17/m17.c $(ls libm17/*/*.c | grep -v unit_tests) -o gen_vectors -lm
           ./gen_vectors > tests/vectors.json
           G=gr-m17
-          cc -O2 -w -I$G/tinier-aes -I$G/micro-ecc tools/gen_crypto_vectors.c $G/tinier-aes/aes.c $G/micro-ecc/uECC.c -o gen_crypto_vectors
+          cc -O2 -ffp-contract=off -w -I$G/tinier-aes -I$G/micro-ecc tools/gen_crypto_vectors.c $G/tinier-aes/aes.c $G/micro-ecc/uECC.c -o gen_crypto_vectors
           ./gen_crypto_vectors > tests/crypto_vectors.json
           if ! git diff --quiet tests/; then
             git diff --stat tests/

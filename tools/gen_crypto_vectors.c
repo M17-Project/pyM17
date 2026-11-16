@@ -2,7 +2,7 @@
 // tinier-aes (AES-CTR), micro-ecc (ECDSA) and gr-m17's scrambler generator.
 //
 // Build and run from the repository root, with gr-m17 checked out next to it:
-//   cc -O2 -I../gr-m17/tinier-aes -I../gr-m17/micro-ecc tools/gen_crypto_vectors.c ../gr-m17/tinier-aes/aes.c ../gr-m17/micro-ecc/uECC.c -o gen_crypto_vectors
+//   cc -O2 -ffp-contract=off -I../gr-m17/tinier-aes -I../gr-m17/micro-ecc tools/gen_crypto_vectors.c ../gr-m17/tinier-aes/aes.c ../gr-m17/micro-ecc/uECC.c -o gen_crypto_vectors
 //   ./gen_crypto_vectors > tests/crypto_vectors.json
 
 #include <stdio.h>
