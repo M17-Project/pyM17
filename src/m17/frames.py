@@ -77,6 +77,7 @@ class StreamFrame:
     lich: bytes  # 5 bytes of the LSF, zeros if the LICH could not be decoded
     lich_counter: int | None  # 0 to 5, None if the LICH could not be decoded
     metric: int
+    decrypted: bool = False  # set by the Receiver when it decrypted the payload
 
 
 @dataclass
