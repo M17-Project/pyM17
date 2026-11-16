@@ -9,8 +9,8 @@ A rewrite of the package, ported from libm17 1.4.3 and gr-m17.
 - Bit-exact with libm17, checked against generated reference values, down to the Viterbi
   metric of noisy frames. Packet transmissions are identical to m17-packet-encode.
 - New API: frames, packets, whole transmissions, a receiver with LICH reassembly and
-  decryption, AES/scrambler encryption, ECDSA stream signatures, an mrefd reflector client
-  and a command line tool.
+  decryption, AES/scrambler encryption, ECDSA stream signatures, a reflector client following
+  the M17 Internet Interface specification (M17_inet) and a command line tool.
 - No required dependencies. cryptography (AES, ECDSA) and numpy (RRC filtering) are optional.
 - Removed: the DHT, P2P and audio modules, the legacy modules and the M17 specification
   3.0 draft features.

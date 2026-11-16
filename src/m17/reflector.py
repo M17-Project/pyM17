@@ -1,4 +1,5 @@
-"""Reflector client: M17 over UDP, as spoken by mrefd (default port 17000).
+"""Reflector client: M17 over UDP as in the M17 Internet Interface specification
+(https://github.com/M17-Project/M17_inet), spoken by mrefd. Default port 17000.
 
 Datagrams (big-endian, CRC = M17 CRC-16):
 
@@ -26,6 +27,8 @@ from .crc import crc16
 from .lsf import LSF, crc_ok
 
 PORT = 17000
+KEEPALIVE = 10.0  # seconds between our own PONGs
+LINK_TIMEOUT = 30.0  # seconds of silence after which the link is considered lost
 
 
 @dataclass
@@ -62,7 +65,13 @@ def encode_stream_frame(stream_id: int, lsf: LSF, fn: int, payload: bytes, last:
 
 
 def encode_packet(lsf: LSF, packet: bytes) -> bytes:
-    """An ``M17P`` datagram. ``packet`` is protocol byte, data and CRC."""
+    """An ``M17P`` datagram. ``packet`` is protocol byte, data and CRC.
+
+    At least one byte of data is required: a 37-byte datagram would look like a
+    reflector interlink packet.
+    """
+    if not 4 <= len(packet) <= 825:
+        raise ValueError("packet must have 1 to 822 bytes of data besides the protocol byte and the CRC")
     return b"M17P" + lsf.to_bytes() + bytes(packet)
 
 
@@ -95,8 +104,9 @@ class ReflectorClient:
         self.listen_only = listen_only
         self._sock = socket.socket(family, socket.SOCK_DGRAM)
         self._cs = callsign_to_bytes(callsign)
-        self.last_heard = 0.0  # time of the last packet from the reflector
+        self.last_heard = 0.0  # time.monotonic() of the last packet from the reflector
         self.reflector = ""  # the reflector's callsign, from its PINGs
+        self._last_pong = 0.0
 
     def __enter__(self) -> "ReflectorClient":
         self.connect()
@@ -115,10 +125,20 @@ class ReflectorClient:
             if data is None:
                 break
             if data[:4] == b"ACKN":
+                self._pong()
                 return
             if data[:4] == b"NACK":
                 raise ConnectionError(f"reflector refused the link to module {self.module}")
         raise ConnectionError("no answer from the reflector")
+
+    @property
+    def link_lost(self) -> bool:
+        """True after 30 seconds without anything from the reflector."""
+        return time.monotonic() - self.last_heard > LINK_TIMEOUT
+
+    def _pong(self) -> None:
+        self._sock.sendto(b"PONG" + self._cs, self.address)
+        self._last_pong = time.monotonic()
 
     def close(self) -> None:
         """Unlink and close the socket."""
@@ -142,32 +162,42 @@ class ReflectorClient:
         self._sock.sendto(encode_packet(lsf, packet), self.address)
 
     def receive(self, timeout: float | None = None) -> Iterator[IPStreamFrame | IPPacket]:
-        """Yield stream frames and packets, answering keep-alives. Ends after ``timeout``
-        seconds without stream or packet traffic (None: never), or when the reflector unlinks us."""
+        """Yield stream frames and packets, keeping the link alive. Ends after ``timeout``
+        seconds without stream or packet traffic (None: never), when the reflector unlinks
+        us, or when the link is lost (see :attr:`link_lost`)."""
         while True:
             data = self._recv(timeout)
-            if data is None or data[:4] == b"DISC":
+            if data is None or data[:4] == b"DISC" or self.link_lost:
                 return
             item = decode(data)
             if item is not None:
                 yield item
 
     def _recv(self, timeout: float | None) -> bytes | None:
-        """Next datagram from the reflector, answering PINGs. None after ``timeout`` seconds."""
+        """Next datagram from the reflector, answering PINGs and sending a PONG at least
+        every 10 seconds. None after ``timeout`` seconds or when the link is lost."""
         deadline = None if timeout is None else time.monotonic() + timeout
         while True:
-            if deadline is not None and (left := deadline - time.monotonic()) <= 0:
+            now = time.monotonic()
+            if self._last_pong and now - self._last_pong >= KEEPALIVE:
+                self._pong()
+            if self.last_heard and self.link_lost:
                 return None
-            self._sock.settimeout(None if deadline is None else left)
+            if deadline is not None and deadline <= now:
+                return None
+            wait = KEEPALIVE - (now - self._last_pong) if self._last_pong else KEEPALIVE
+            if deadline is not None:
+                wait = min(wait, deadline - now)
+            self._sock.settimeout(max(wait, 0.01))
             try:
                 data, addr = self._sock.recvfrom(1024)
             except TimeoutError:
-                return None
+                continue
             if addr[:2] != self.address[:2]:  # not from the reflector
                 continue
             self.last_heard = time.monotonic()
             if data[:4] in (b"PING", b"PONG") and len(data) >= 10:
                 self.reflector = callsign_from_bytes(data[4:10])
-                self._sock.sendto(b"PONG" + self._cs, self.address)
+                self._pong()
                 continue
             return data

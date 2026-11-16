@@ -2,6 +2,7 @@
 
 import socket
 import threading
+import time
 
 import pytest
 
@@ -115,3 +116,43 @@ def test_client_refused():
         ref.connect(timeout=2)
     ref.close()
     srv.join(3)
+
+
+def test_packet_needs_data():
+    # a 37-byte M17P datagram would look like a reflector interlink packet (M17_inet)
+    lsf = LSF(dst="@ALL", src="N0CALL", type=PACKET | DATA)
+    with pytest.raises(ValueError):
+        reflector.encode_packet(lsf, m17.build_packet(5, b""))
+    assert len(reflector.encode_packet(lsf, m17.build_packet(5, b"x"))) == 38
+
+
+def test_keepalive_and_link_loss(monkeypatch):
+    """With a silent reflector, the client sends its own PONGs, then reports the link lost."""
+    monkeypatch.setattr(reflector, "KEEPALIVE", 0.2)
+    monkeypatch.setattr(reflector, "LINK_TIMEOUT", 0.9)
+    srv = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    srv.bind(("127.0.0.1", 0))
+    srv.settimeout(3)
+    got = []
+
+    def silent_reflector():
+        d, addr = srv.recvfrom(64)  # CONN
+        srv.sendto(b"ACKN", addr)
+        srv.settimeout(1.5)
+        try:
+            while True:
+                got.append(srv.recvfrom(64)[0])
+        except TimeoutError:
+            pass
+
+    t = threading.Thread(target=silent_reflector, daemon=True)
+    t.start()
+    ref = reflector.ReflectorClient("127.0.0.1", "N0CALL", "A", port=srv.getsockname()[1])
+    ref.connect(timeout=2)
+    start = time.monotonic()
+    assert list(ref.receive(timeout=10)) == []  # ends on link loss, long before the timeout
+    assert ref.link_lost and time.monotonic() - start < 2
+    ref._sock.close()
+    t.join(3)
+    srv.close()
+    assert got.count(b"PONG" + callsign_to_bytes("N0CALL")) >= 3

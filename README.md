@@ -52,7 +52,8 @@ symbols = m17.encode_stream(lsf, payloads, key=aes_key, signing_key=private)
 rx = m17.Receiver(key=aes_key, public_keys=[public])  # decrypts, yields a Signature event
 ```
 
-A reflector (mrefd, UDP port 17000):
+A reflector, as in the [M17 Internet Interface](https://github.com/M17-Project/M17_inet)
+specification (mrefd, UDP port 17000):
 
 ```python
 from m17.reflector import ReflectorClient
@@ -106,6 +107,6 @@ to rebuild them. Decoding matches libm17 exactly, including the Viterbi metric o
 ## Credits and license
 
 pyM17 was started by Michael McGinty W2FBI and continued by Luke Stamm WE3DZ. Version 0.2
-is a rewrite by the M17 Project, with the algorithms ported from libm17 and gr-m17.
+is a rewrite by the M17 Project (Wojciech Kaczmarski SP5WWP), ported from libm17 and gr-m17.
 
 AGPL-3.0, see [LICENSE](LICENSE).

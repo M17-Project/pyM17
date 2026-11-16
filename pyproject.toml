@@ -12,6 +12,7 @@ license-files = ["LICENSE"]
 authors = [
     { name = "Michael McGinty W2FBI" },
     { name = "Luke Stamm WE3DZ", email = "we3dz@we3dz.com" },
+    { name = "Wojciech Kaczmarski SP5WWP" },
     { name = "M17 Project" },
 ]
 requires-python = ">=3.10"
