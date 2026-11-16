@@ -209,6 +209,12 @@ def decode_lich(soft: list[int]) -> bytes | None:
             return None
         w.append(d)
     return bytes(
-        [w[0] >> 4, ((w[0] & 0xF) << 4) | (w[1] >> 8), w[1] & 0xFF,
-         w[2] >> 4, ((w[2] & 0xF) << 4) | (w[3] >> 8), w[3] & 0xFF]
+        [
+            w[0] >> 4,
+            ((w[0] & 0xF) << 4) | (w[1] >> 8),
+            w[1] & 0xFF,
+            w[2] >> 4,
+            ((w[2] & 0xF) << 4) | (w[3] >> 8),
+            w[3] & 0xFF,
+        ]
     )

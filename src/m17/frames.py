@@ -15,9 +15,7 @@ def lsf_frame(lsf: LSF) -> list[int]:
     return syncword_symbols(SYNC_LSF) + bits_to_symbols(bits)
 
 
-def stream_frame(
-    lsf: LSF, fn: int, payload: bytes, last: bool = False, lich_counter: int | None = None
-) -> list[int]:
+def stream_frame(lsf: LSF, fn: int, payload: bytes, last: bool = False, lich_counter: int | None = None) -> list[int]:
     """Stream frame number ``fn`` with a 16-byte payload: 192 symbols.
 
     The frame carries LICH chunk ``lich_counter`` of the LSF (default ``fn % 6``).

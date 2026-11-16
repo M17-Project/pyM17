@@ -87,7 +87,8 @@ def test_packet_limits_and_errors():
     assert asm.add(m17.PacketFrame(parts[0][0], False, 0, 0)) is None
     assert asm.add(m17.PacketFrame(parts[2][0].ljust(25, b"\0"), True, parts[2][1], 0)) is not None
     # a damaged byte fails the CRC
-    bad = bytearray(m17.sms("z")); bad[1] ^= 1
+    bad = bytearray(m17.sms("z"))
+    bad[1] ^= 1
     p = asm.add(m17.PacketFrame(bytes(bad).ljust(25, b"\0"), True, len(bad), 0))
     assert p is not None and not p.crc_ok
 
@@ -138,7 +139,7 @@ def test_modulate_and_matched_filter():
     rx_samples = phy.matched_filter(samples, sps=10)
     delay = 80  # 2 x 4 symbols of filter delay, 10 samples each
     symbols = rx_samples[delay : delay + len(tx) * 10 : 10]
-    assert max(abs(a - b) for a, b in zip(symbols, tx)) < 0.2
+    assert max(abs(a - b) for a, b in zip(symbols, tx, strict=True)) < 0.2
     packets = [e for e in m17.Receiver().feed(symbols) if isinstance(e, m17.Packet)]
     assert packets and packets[0].text == "RRC round trip"
 
@@ -149,7 +150,8 @@ def test_modulate_and_matched_filter():
 def test_cli_round_trip(tmp_path):
     sym = tmp_path / "msg.sym"
     run = [sys.executable, "-m", "m17"]
-    subprocess.run(run + ["sms", "--src", "N0CALL", "--dst", "#M17", "--can", "2", "Hello CLI", "-o", str(sym)], check=True)
+    args = ["sms", "--src", "N0CALL", "--dst", "#M17", "--can", "2", "Hello CLI", "-o", str(sym)]
+    subprocess.run(run + args, check=True)
     assert len(sym.read_bytes()) == 4 * 768
     out = subprocess.run(run + ["decode", str(sym)], check=True, capture_output=True, text=True).stdout
     assert "LSF N0CALL -> #M17" in out and "CAN 2" in out and "'Hello CLI'" in out and "End of transmission" in out

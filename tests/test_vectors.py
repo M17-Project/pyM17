@@ -45,8 +45,15 @@ def test_preamble_and_eot():
 @pytest.mark.parametrize("case", V["meta_position"], ids=lambda c: f"{c['lat']},{c['lon']}")
 def test_meta_position(case):
     pos = Position(
-        lat=case["lat"], lon=case["lon"], altitude=case["altitude"], bearing=case["bearing"],
-        speed=case["speed"], radius=case["radius"], validity=case["validity"], source=1, station=2,
+        lat=case["lat"],
+        lon=case["lon"],
+        altitude=case["altitude"],
+        bearing=case["bearing"],
+        speed=case["speed"],
+        radius=case["radius"],
+        validity=case["validity"],
+        source=1,
+        station=2,
     )
     assert pos.to_meta().hex() == case["meta"]
 
@@ -101,8 +108,17 @@ def test_noisy_frames_match_libm17(case):
         fn = d.fn | (0x8000 if d.last else 0)
         lich_cnt = 0xFF if d.lich_counter is None else d.lich_counter
         assert (d.payload.hex(), fn, d.lich.hex(), lich_cnt, d.metric) == (
-            case["payload"], case["fn"], case["lich"], case["lich_cnt"], case["metric"])
+            case["payload"],
+            case["fn"],
+            case["lich"],
+            case["lich_cnt"],
+            case["metric"],
+        )
     else:
         d = frames.decode_packet(case["symbols"])
         assert (d.data.hex(), int(d.last), d.counter, d.metric) == (
-            case["data"], case["eof"], case["counter"], case["metric"])
+            case["data"],
+            case["eof"],
+            case["counter"],
+            case["metric"],
+        )

@@ -43,8 +43,9 @@ def encode_stream(
     if signed:
         sig = crypto.sign(signing_key, digest.digest)
         for k in range(4):
-            out += stream_frame(lsf, SIGNATURE_FN + k, sig[16 * k : 16 * k + 16], last=k == 3,
-                                lich_counter=(len(payloads) + k) % 6)
+            out += stream_frame(
+                lsf, SIGNATURE_FN + k, sig[16 * k : 16 * k + 16], last=k == 3, lich_counter=(len(payloads) + k) % 6
+            )
     return out + eot()
 
 

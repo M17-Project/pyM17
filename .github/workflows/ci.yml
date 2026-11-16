@@ -2,150 +2,57 @@ name: CI
 
 on:
   push:
-    branches: [main, develop]
-    paths:
-      - 'src/m17/**'
-      - '.github/workflows/ci.yml'
+    branches: [main]
   pull_request:
-    branches: [main, develop]
-    paths:
-      - 'src/m17/**'
-      - '.github/workflows/ci.yml'
   workflow_dispatch:
 
 jobs:
   test:
-    name: Test Python ${{ matrix.python-version }}
+    name: Test (Python ${{ matrix.python-version }})
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.12"]
-
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
     steps:
       - uses: actions/checkout@v4
-
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-
-      - name: Install Poetry
-        uses: snok/install-poetry@v1
-        with:
-          version: latest
-          virtualenvs-create: true
-          virtualenvs-in-project: true
-
-      - name: Load cached venv
-        id: cached-poetry-dependencies
-        uses: actions/cache@v4
-        with:
-          path: src/m17/.venv
-          key: venv-${{ runner.os }}-${{ matrix.python-version }}-${{ hashFiles('src/m17/poetry.lock') }}
-
-      - name: Install dependencies
-        if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
-        run: poetry install --no-interaction --no-root
-        working-directory: src/m17
-
-      - name: Install project
-        run: poetry install --no-interaction
-        working-directory: src/m17
-
-      - name: Run tests with coverage
-        run: poetry run pytest --cov=m17 --cov-report=xml --cov-report=term-missing
-        working-directory: src/m17
-
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v4
-        with:
-          files: src/m17/coverage.xml
-          flags: unittests
-          name: codecov-umbrella
-          fail_ci_if_error: false
-          verbose: true
-        env:
-          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+      - run: pip install -e ".[test]"
+      - run: pytest
 
   lint:
     name: Lint
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: "3.13"
+      - run: pip install ruff
+      - run: ruff check src tests tools
+      - run: ruff format --check src tests tools
 
-      - name: Install Poetry
-        uses: snok/install-poetry@v1
-        with:
-          version: latest
-          virtualenvs-create: true
-          virtualenvs-in-project: true
-
-      - name: Load cached venv
-        id: cached-poetry-dependencies
-        uses: actions/cache@v4
-        with:
-          path: src/m17/.venv
-          key: venv-${{ runner.os }}-3.12-${{ hashFiles('src/m17/poetry.lock') }}
-
-      - name: Install dependencies
-        if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
-        run: poetry install --no-interaction --no-root
-        working-directory: src/m17
-
-      - name: Install project
-        run: poetry install --no-interaction
-        working-directory: src/m17
-
-      - name: Run ruff check
-        run: poetry run ruff check m17/
-        working-directory: src/m17
-
-      - name: Run ruff format check
-        run: poetry run ruff format --check m17/
-        working-directory: src/m17
-
-  type-check:
-    name: Type Check
+  vectors:
+    name: Test vectors match libm17 and gr-m17
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: actions/checkout@v4
         with:
-          python-version: "3.12"
-
-      - name: Install Poetry
-        uses: snok/install-poetry@v1
+          repository: M17-Project/libm17
+          path: libm17
+      - uses: actions/checkout@v4
         with:
-          version: latest
-          virtualenvs-create: true
-          virtualenvs-in-project: true
-
-      - name: Load cached venv
-        id: cached-poetry-dependencies
-        uses: actions/cache@v4
-        with:
-          path: src/m17/.venv
-          key: venv-${{ runner.os }}-3.12-${{ hashFiles('src/m17/poetry.lock') }}
-
-      - name: Install dependencies
-        if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
-        run: poetry install --no-interaction --no-root
-        working-directory: src/m17
-
-      - name: Install project
-        run: poetry install --no-interaction
-        working-directory: src/m17
-
-      - name: Run mypy
-        run: poetry run mypy m17/
-        working-directory: src/m17
+          repository: M17-Project/gr-m17
+          path: gr-m17
+          submodules: recursive
+      - name: Regenerate and compare
+        run: |
+          cc -O2 -Ilibm17 tools/gen_vectors.c libm17/m17.c $(ls libm17/*/*.c | grep -v unit_tests) -o gen_vectors -lm
+          ./gen_vectors > tests/vectors.json
+          G=gr-m17
+          cc -O2 -w -I$G/tinier-aes -I$G/micro-ecc tools/gen_crypto_vectors.c $G/tinier-aes/aes.c $G/micro-ecc/uECC.c -o gen_crypto_vectors
+          ./gen_crypto_vectors > tests/crypto_vectors.json
+          git diff --exit-code tests/

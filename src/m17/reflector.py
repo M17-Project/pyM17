@@ -161,7 +161,7 @@ class ReflectorClient:
             self._sock.settimeout(None if deadline is None else left)
             try:
                 data, addr = self._sock.recvfrom(1024)
-            except (socket.timeout, TimeoutError):
+            except TimeoutError:
                 return None
             if addr[:2] != self.address[:2]:  # not from the reflector
                 continue

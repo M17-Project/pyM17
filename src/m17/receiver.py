@@ -133,7 +133,8 @@ class Receiver:
         self._digest.update(frame.payload)
         encr = lsf.type & (3 << 3)
         if self.key is not None and encr == ENCR_AES:
-            frame = replace(frame, payload=crypto.aes_crypt(self.key, lsf.meta, frame.fn, frame.payload), decrypted=True)
+            payload = crypto.aes_crypt(self.key, lsf.meta, frame.fn, frame.payload)
+            frame = replace(frame, payload=payload, decrypted=True)
         elif self.key is not None and encr == ENCR_SCRAMBLER:
             if self._scrambler is None:
                 self._scrambler = crypto.Scrambler(self.key)

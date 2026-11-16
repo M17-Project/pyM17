@@ -25,13 +25,12 @@ jobs:
 
       - name: Build package
         run: python -m build
-        working-directory: src/m17
 
       - name: Upload distribution artifacts
         uses: actions/upload-artifact@v4
         with:
           name: python-package-distributions
-          path: src/m17/dist/
+          path: dist/
 
   publish:
     name: Publish to PyPI

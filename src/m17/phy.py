@@ -23,8 +23,7 @@ EOT_MARKER = 0x555D
 INTERLEAVER = tuple((45 * i + 92 * i * i) % 368 for i in range(368))
 
 RANDOMIZER = bytes.fromhex(
-    "d6b5e23082ff8462ba4e9690d898dd5d0cc85243911df86e682f35da14eacd76198dd580d1338713"
-    "57182d2978c3"
+    "d6b5e23082ff8462ba4e9690d898dd5d0cc85243911df86e682f35da14eacd76198dd580d133871357182d2978c3"
 )
 
 
@@ -115,7 +114,7 @@ def symbols_to_soft(symbols) -> list[int]:
 
 def distance(symbols, reference) -> float:
     """Euclidean distance between received symbols and ideal ones (syncword detection)."""
-    return math.sqrt(sum((float(a) - b) ** 2 for a, b in zip(symbols, reference)))
+    return math.sqrt(sum((float(a) - b) ** 2 for a, b in zip(symbols, reference, strict=True)))
 
 
 # ---- root raised cosine filter
@@ -132,9 +131,13 @@ def rrc_taps(sps: int = 10, span: int = 8, alpha: float = 0.5) -> list[float]:
         if t == 0:
             h = 1 - alpha + 4 * alpha / math.pi
         elif abs(abs(4 * alpha * t) - 1) < 1e-12:
-            h = alpha / math.sqrt(2) * (
-                (1 + 2 / math.pi) * math.sin(math.pi / (4 * alpha))
-                + (1 - 2 / math.pi) * math.cos(math.pi / (4 * alpha))
+            h = (
+                alpha
+                / math.sqrt(2)
+                * (
+                    (1 + 2 / math.pi) * math.sin(math.pi / (4 * alpha))
+                    + (1 - 2 / math.pi) * math.cos(math.pi / (4 * alpha))
+                )
             )
         else:
             h = (math.sin(math.pi * t * (1 - alpha)) + 4 * alpha * t * math.cos(math.pi * t * (1 + alpha))) / (

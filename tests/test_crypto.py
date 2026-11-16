@@ -56,8 +56,12 @@ def _payloads(n):
 def test_aes_signed_stream_round_trip():
     key = bytes(range(32))
     private, public = crypto.generate_key()
-    lsf = LSF(dst="@ALL", src="SP5WWP", type=STREAM | VOICE | ENCR_AES | AES_256 | SIGNED,
-              meta=meta_nonce(1763300000, bytes(range(10))))
+    lsf = LSF(
+        dst="@ALL",
+        src="SP5WWP",
+        type=STREAM | VOICE | ENCR_AES | AES_256 | SIGNED,
+        meta=meta_nonce(1763300000, bytes(range(10))),
+    )
     tx = m17.encode_stream(lsf, _payloads(12), key=key, signing_key=private)
     assert len(tx) == 192 * (2 + 12 + 4 + 1)
 

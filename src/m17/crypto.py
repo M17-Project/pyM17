@@ -26,7 +26,7 @@ def aes_crypt(key: bytes, nonce: bytes, fn: int, payload: bytes) -> bytes:
         raise ValueError("nonce must be 14 bytes, payload 16 bytes")
     counter = bytes(nonce) + bytes([(fn >> 8) & 0x7F, fn & 0xFF])
     block = Cipher(algorithms.AES(bytes(key)), modes.ECB()).encryptor().update(counter)
-    return bytes(a ^ b for a, b in zip(payload, block))
+    return bytes(a ^ b for a, b in zip(payload, block, strict=True))
 
 
 # ---- scrambler
@@ -63,8 +63,8 @@ class Scrambler:
         return out.to_bytes(16, "big")
 
     def crypt(self, frame: int, payload: bytes) -> bytes:
-        """Encrypt or decrypt the payload of frame ``frame``."""
-        return bytes(a ^ b for a, b in zip(payload, self.keystream(frame)))
+        """Encrypt or decrypt the 16-byte payload of frame ``frame``."""
+        return bytes(a ^ b for a, b in zip(payload, self.keystream(frame), strict=True))
 
 
 # ---- signatures

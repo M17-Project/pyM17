@@ -119,12 +119,17 @@ class Position:
         spd = _roundf(_f32(_clamp(_f32(self.speed), 0.0, 2047.5) * 2.0)) & 0xFFF
         radius = next((i for i, r in enumerate(_RADIUS) if _f32(self.radius) <= r), 7)
         bearing = self.bearing & 0x1FF
-        return bytes(
-            [((self.source & 0xF) << 4) | (self.station & 0xF),
-             ((self.validity & 0xF) << 4) | (radius << 1) | (bearing >> 8),
-             bearing & 0xFF]
-        ) + (int(lat) & 0xFFFFFF).to_bytes(3, "big") + (int(lon) & 0xFFFFFF).to_bytes(3, "big") + bytes(
-            [alt >> 8, alt & 0xFF, spd >> 4, (spd & 0xF) << 4, 0]
+        return (
+            bytes(
+                [
+                    ((self.source & 0xF) << 4) | (self.station & 0xF),
+                    ((self.validity & 0xF) << 4) | (radius << 1) | (bearing >> 8),
+                    bearing & 0xFF,
+                ]
+            )
+            + (int(lat) & 0xFFFFFF).to_bytes(3, "big")
+            + (int(lon) & 0xFFFFFF).to_bytes(3, "big")
+            + bytes([alt >> 8, alt & 0xFF, spd >> 4, (spd & 0xF) << 4, 0])
         )
 
     @classmethod
