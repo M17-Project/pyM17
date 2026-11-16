@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "m17"
+version = "0.2.0"
+description = "The M17 digital radio protocol in Python, bit-exact with libm17"
+readme = "README.md"
+license = "AGPL-3.0-only"
+license-files = ["LICENSE"]
+authors = [
+    { name = "Michael McGinty W2FBI" },
+    { name = "Luke Stamm WE3DZ", email = "we3dz@we3dz.com" },
+    { name = "M17 Project" },
+]
+requires-python = ">=3.10"
+dependencies = []
+keywords = ["M17", "amateur radio", "ham radio", "digital voice", "SDR"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Topic :: Communications :: Ham Radio",
+    "Development Status :: 4 - Beta",
+]
+
+[project.optional-dependencies]
+dsp = ["numpy"]
+crypto = ["cryptography>=42"]
+test = ["pytest", "numpy", "cryptography>=42"]
+
+[project.urls]
+Homepage = "https://github.com/M17-Project/pyM17"
+Specification = "https://spec.m17project.org/"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
