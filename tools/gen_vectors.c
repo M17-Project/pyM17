@@ -11,7 +11,6 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
-#include <math.h>
 #include "m17.h"
 
 extern const uint8_t rand_seq[46];
@@ -45,7 +44,10 @@ static void f_list(const float *v, int n)
 	putchar(']');
 }
 
-// deterministic Gaussian noise (xorshift32 + Box-Muller), float32 throughout
+// deterministic noise: xorshift32 and the sum of 12 uniform values (Irwin-Hall),
+// close to a unit Gaussian. Only additions, so the result is the same on every
+// machine. logf(), cosf() and friends are not: glibc picks CPU-specific
+// implementations that differ in the last bit.
 static uint32_t rng_state = 12345;
 
 static float uniform(void)
@@ -58,7 +60,10 @@ static float uniform(void)
 
 static float gauss(void)
 {
-	return sqrtf(-2.0f * logf(uniform())) * cosf(6.2831853f * uniform());
+	float sum = -6.0f;
+	for (int i = 0; i < 12; i++)
+		sum += uniform();
+	return sum;
 }
 
 static void make_lsf(lsf_t *lsf, const char *src, const char *dst, uint16_t type, uint8_t seed)
