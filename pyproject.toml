@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "m17"
-version = "0.2.0"
+version = "0.3.0"
 description = "The M17 digital radio protocol in Python, bit-exact with libm17"
 readme = "README.md"
 license = "AGPL-3.0-only"

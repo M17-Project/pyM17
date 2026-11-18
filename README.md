@@ -50,6 +50,9 @@ lsf = LSF(dst="@ALL", src="N0CALL", type=STREAM | VOICE | ENCR_AES | AES_256 | S
           meta=meta_nonce(int(time.time()), os.urandom(10)))
 symbols = m17.encode_stream(lsf, payloads, key=aes_key, signing_key=private)
 rx = m17.Receiver(key=aes_key, public_keys=[public])  # decrypts, yields a Signature event
+for event in rx.feed(symbols):
+    if isinstance(event, m17.Signature):  # M17 Specification 2.1: who signed, for whom, when
+        print(event.valid, event.signer, event.destination, event.signed_at, event.fresh())
 ```
 
 A reflector, as in the [M17 Internet Interface](https://github.com/M17-Project/M17_inet)
@@ -89,7 +92,7 @@ filter (`m17.phy.matched_filter()`) and symbol timing recovery.
 | `packet` | building, splitting and reassembling packets, SMS |
 | `transmission` | whole stream and packet transmissions |
 | `receiver` | syncword search, frame decoding, decryption, signature checks |
-| `crypto` | AES-CTR, 8/16/24-bit scramblers, stream digest, ECDSA (secp256r1) |
+| `crypto` | AES-CTR, 8/16/24-bit scramblers, SHA-256 stream hash and Authentication Frame (spec 2.1), ECDSA (secp256r1) |
 | `reflector` | mrefd datagrams and a reflector client |
 
 ## Testing

@@ -1,8 +1,12 @@
 // Encryption and signature test vectors for pyM17, from gr-m17's code:
-// tinier-aes (AES-CTR), micro-ecc (ECDSA) and gr-m17's scrambler generator.
+// tinier-aes (AES-CTR), micro-ecc (ECDSA), gr-m17's stream hash (lib/m17sig.c on sha-2, M17
+// specification 2.1) and gr-m17's scrambler generator.
 //
-// Build and run from the repository root, with gr-m17 checked out next to it:
-//   cc -O2 -ffp-contract=off -I../gr-m17/tinier-aes -I../gr-m17/micro-ecc tools/gen_crypto_vectors.c ../gr-m17/tinier-aes/aes.c ../gr-m17/micro-ecc/uECC.c -o gen_crypto_vectors
+// Build and run from the repository root, with gr-m17 (1.1.0 or later, submodules included)
+// checked out next to it:
+//   G=../gr-m17
+//   cc -O2 -ffp-contract=off -I$G/tinier-aes -I$G/micro-ecc -I$G/lib -I$G/sha-2 tools/gen_crypto_vectors.c \
+//     $G/tinier-aes/aes.c $G/micro-ecc/uECC.c $G/lib/m17sig.c $G/sha-2/sha-256.c -o gen_crypto_vectors
 //   ./gen_crypto_vectors > tests/crypto_vectors.json
 
 #include <stdio.h>
@@ -10,6 +14,7 @@
 #include <string.h>
 #include "aes.h"
 #include "uECC.h"
+#include "m17sig.h"
 
 static void hex(const uint8_t *b, int n)
 {
@@ -101,27 +106,35 @@ int main(void)
 	printf("],\n\"ecdsa\": ");
 	uECC_set_rng(rng);
 	const struct uECC_Curve_t *curve = uECC_secp256r1();
-	uint8_t priv[32], pub[64], pub2[64], digest[16], sig[64];
+	uint8_t priv[32], pub[64], pub2[64], hash[32], sig[64], pl[16], auth[16];
 	uECC_make_key(pub, priv, curve);
 	uECC_compute_public_key(priv, pub2, curve);
-	// the stream digest of gr-m17: XOR each payload in, rotate left by one byte
-	memset(digest, 0, 16);
+	// gr-m17's stream hash: 5 frames (FN 0..4), then the Authentication Frame N0CALL -> W1AW
+	static const uint8_t n0call[6] = {0x00, 0x00, 0x4b, 0x13, 0xd1, 0x06};
+	static const uint8_t w1aw[6] = {0x00, 0x00, 0x00, 0x16, 0x80, 0xb7};
+	const uint32_t ts = 217123200; // 2026-11-18T00:00:00Z, seconds since 2020-01-01
+	m17sig_ctx_t ctx;
+	m17sig_init(&ctx);
 	for (int f = 0; f < 5; f++) {
 		for (int i = 0; i < 16; i++)
-			digest[i] ^= (uint8_t)(f * 9 + i * 3);
-		uint8_t t = digest[0];
-		memmove(digest, digest + 1, 15);
-		digest[15] = t;
+			pl[i] = (uint8_t)(f * 9 + i * 3);
+		m17sig_frame(&ctx, (uint16_t)f, pl);
 	}
-	uECC_sign(priv, digest, 16, sig, curve);
+	m17sig_auth_build(auth, n0call, w1aw, ts);
+	m17sig_frame(&ctx, M17SIG_FN_AUTH, auth);
+	m17sig_final(&ctx, hash);
+	uECC_sign(priv, hash, 32, sig, curve);
 	printf("{\"private\":");
 	hex(priv, 32);
 	printf(",\"public\":");
 	hex(pub2, 64);
-	printf(",\"digest\":");
-	hex(digest, 16);
+	printf(",\"signer\":\"N0CALL\",\"destination\":\"W1AW\",\"timestamp\":%u", (unsigned)(ts + M17SIG_EPOCH));
+	printf(",\"auth\":");
+	hex(auth, 16);
+	printf(",\"hash\":");
+	hex(hash, 32);
 	printf(",\"signature\":");
 	hex(sig, 64);
-	printf(",\"verifies\":%d}\n}\n", uECC_verify(pub, digest, 16, sig, curve));
+	printf(",\"verifies\":%d}\n}\n", uECC_verify(pub, hash, 32, sig, curve));
 	return 0;
 }

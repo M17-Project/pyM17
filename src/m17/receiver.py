@@ -2,12 +2,14 @@
 
 from collections.abc import Iterable
 from dataclasses import dataclass, replace
+from datetime import datetime, timezone
 
+from .callsign import callsign_from_bytes
 from .frames import LSFFrame, PacketFrame, StreamFrame, decode_lsf, decode_packet, decode_stream
-from .lsf import ENCR_AES, ENCR_SCRAMBLER, LSF, SIGNED, crc_ok
+from .lsf import ENCR_AES, ENCR_NONE, ENCR_SCRAMBLER, LSF, META_ECD, SIGNED, crc_ok
 from .packet import Packet, PacketAssembler
 from .phy import EOT_MARKER, SYM_PER_FRA, SYM_PER_SWD, SYNC_LSF, SYNC_PKT, SYNC_STR, distance, syncword_symbols
-from .transmission import SIGNATURE_FN
+from .transmission import AUTH_FN, SIGNATURE_FN
 
 
 @dataclass
@@ -17,10 +19,29 @@ class EndOfTransmission:
 
 @dataclass
 class Signature:
-    """Result of a signed stream: ``valid`` is None if it could not be checked."""
+    """Result of a signed stream (specification 2.1).
+
+    ``valid`` is None if it could not be checked: no public keys, frames missed, or
+    reception started after FN 0. The other fields come from the Authentication Frame
+    and are empty / None when it was not received.
+    """
 
     valid: bool | None
     public_key: bytes | None  # the key it verified with
+    signer: str = ""  # callsign of the station whose key signed the stream
+    destination: str = ""  # DST as sent by the signer
+    signed_at: datetime | None = None  # time of signing, UTC
+    signer_is_originator: bool | None = None  # False: signed by another station than the one the LSF names
+
+    def fresh(self, window: float = 300, now: datetime | None = None) -> bool | None:
+        """Time of signing within ``window`` seconds of ``now`` (default: the system clock).
+
+        The specification's default window is 300 s; only meaningful with a trusted clock.
+        """
+        if self.signed_at is None:
+            return None
+        now = now or datetime.now(timezone.utc)
+        return abs((now - self.signed_at).total_seconds()) <= window
 
 
 Event = LSFFrame | StreamFrame | PacketFrame | Packet | Signature | EndOfTransmission
@@ -59,10 +80,10 @@ class Receiver:
         self._new_stream()
 
     def _new_stream(self) -> None:
-        from .crypto import StreamDigest
-
         self._lich: dict[int, bytes] = {}
-        self._digest = StreamDigest()
+        self._digest = None  # StreamHash from FN 0; None before FN 0 and after a missed frame
+        self._next_fn = -1
+        self._auth: bytes | None = None
         self._signature = bytearray(64)
         self._sig_parts = 0
         self._scrambler = None
@@ -130,7 +151,21 @@ class Receiver:
             if k == 3:
                 events.append(self._check_signature())
             return events
-        self._digest.update(frame.payload)
+        if lsf.type & SIGNED:
+            # the hash covers every frame from FN 0 with its payload as transmitted, then the
+            # Authentication Frame, which is sent in the clear
+            if frame.fn == AUTH_FN:
+                if self._digest:
+                    self._digest.update(frame.fn, frame.payload)
+                self._auth = frame.payload
+                return [frame]
+            if frame.fn == 0:
+                self._digest = crypto.StreamHash()
+            elif frame.fn != self._next_fn:
+                self._digest = None  # a frame is missing: the hash cannot be rebuilt
+            if self._digest:
+                self._digest.update(frame.fn, frame.payload)
+            self._next_fn = frame.fn + 1
         encr = lsf.type & (3 << 3)
         if self.key is not None and encr == ENCR_AES:
             payload = crypto.aes_crypt(self.key, lsf.meta, frame.fn, frame.payload)
@@ -145,9 +180,22 @@ class Receiver:
     def _check_signature(self) -> Signature:
         from . import crypto
 
-        if self._sig_parts != 0xF or not self.public_keys:
-            return Signature(None, None)
+        info = {}
+        if self._auth is not None:
+            signer, destination, t = crypto.parse_auth(self._auth)
+            lsf = self.lsf
+            ecd = (lsf.type & (3 << 3)) == ENCR_NONE and (lsf.type & (3 << 5)) == META_ECD
+            originator = callsign_from_bytes(lsf.meta[0:6]) if ecd else lsf.src  # ECD Callsign Field 1, else SRC
+            info = dict(
+                signer=signer,
+                destination=destination,
+                signed_at=datetime.fromtimestamp(t, timezone.utc),
+                signer_is_originator=signer == originator,
+            )
+        if self._sig_parts != 0xF or self._digest is None or self._auth is None or not self.public_keys:
+            return Signature(None, None, **info)
+        digest = self._digest.digest
         for key in self.public_keys:
-            if crypto.verify(key, self._digest.digest, bytes(self._signature)):
-                return Signature(True, key)
-        return Signature(False, None)
+            if crypto.verify(key, digest, bytes(self._signature)):
+                return Signature(True, key, **info)
+        return Signature(False, None, **info)

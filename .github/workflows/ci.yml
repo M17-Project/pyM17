@@ -57,7 +57,7 @@ jobs:
           cc -O2 -ffp-contract=off -Ilibm17 tools/gen_vectors.c libm17/m17.c $(ls libm17/*/*.c | grep -v unit_tests) -o gen_vectors -lm
           ./gen_vectors > tests/vectors.json
           G=gr-m17
-          cc -O2 -ffp-contract=off -w -I$G/tinier-aes -I$G/micro-ecc tools/gen_crypto_vectors.c $G/tinier-aes/aes.c $G/micro-ecc/uECC.c -o gen_crypto_vectors
+          cc -O2 -ffp-contract=off -w -I$G/tinier-aes -I$G/micro-ecc -I$G/lib -I$G/sha-2 tools/gen_crypto_vectors.c $G/tinier-aes/aes.c $G/micro-ecc/uECC.c $G/lib/m17sig.c $G/sha-2/sha-256.c -o gen_crypto_vectors
           ./gen_crypto_vectors > tests/crypto_vectors.json
           if ! git diff --quiet tests/; then
             git diff --stat tests/

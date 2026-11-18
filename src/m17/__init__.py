@@ -23,7 +23,7 @@ from .packet import Packet, PacketAssembler, build_packet, sms, split_packet
 from .receiver import EndOfTransmission, Receiver, Signature
 from .transmission import encode_packet, encode_stream
 
-__version__ = "0.2.0"
+__version__ = "0.3.0"
 
 __all__ = [
     "BROADCAST",

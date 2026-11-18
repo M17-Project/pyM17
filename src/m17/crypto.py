@@ -1,6 +1,6 @@
 """Stream encryption (AES-CTR, scramblers) and signatures (ECDSA P-256).
 
-Compatible with gr-m17 and the M17 specification 2.0. AES and ECDSA need the
+Compatible with gr-m17 and the M17 specification 2.1. AES and ECDSA need the
 ``cryptography`` package (``pip install m17[crypto]``).
 
 - AES: the counter block is the 14-byte nonce (META) followed by the 15-bit
@@ -8,9 +8,12 @@ Compatible with gr-m17 and the M17 specification 2.0. AES and ECDSA need the
   are the same operation.
 - Scrambler: an 8, 16 or 24-bit LFSR, selected by the seed length. Each frame
   uses the next 128 bits of its output.
-- Signature: a 16-byte digest of the (encrypted) payloads, signed with ECDSA
-  over secp256r1. Keys and signatures are raw bytes as in micro-ecc: private
-  key 32 bytes, public key 64 bytes (x, y), signature 64 bytes (r, s).
+- Signature (specification 2.1): a SHA-256 hash of the tag "M17-SIG-v2" and
+  every frame's 16-bit FN and 16-byte payload as transmitted (encrypted, if the
+  stream is), ending with the Authentication Frame (FN 0x7FFB: signer callsign,
+  destination, time of signing). The 32-byte hash is signed with ECDSA over
+  secp256r1. Keys and signatures are raw bytes as in micro-ecc: private key 32
+  bytes, public key 64 bytes (x, y), signature 64 bytes (r, s).
 """
 
 # ---- AES
@@ -70,20 +73,49 @@ class Scrambler:
 # ---- signatures
 
 
-class StreamDigest:
-    """Digest of a signed stream: each payload is XORed in, then rotated left by a byte."""
+EPOCH_2020 = 1577836800  # 2020-01-01T00:00:00Z as a Unix time
+AUTH_FN = 0x7FFB  # the Authentication Frame, sent before the signature frames
+
+
+class StreamHash:
+    """Hash of a signed stream (specification 2.1). Feed every frame from FN 0, then the
+    Authentication Frame, each with its FN and its payload as transmitted."""
 
     def __init__(self) -> None:
-        self._d = bytearray(16)
+        import hashlib
 
-    def update(self, payload: bytes) -> None:
-        for i in range(16):
-            self._d[i] ^= payload[i]
-        self._d.append(self._d.pop(0))
+        self._h = hashlib.sha256(b"M17-SIG-v2")
+
+    def update(self, fn: int, payload: bytes) -> None:
+        if len(payload) != 16:
+            raise ValueError("payload must be 16 bytes")
+        self._h.update((fn & 0xFFFF).to_bytes(2, "big") + bytes(payload))
 
     @property
     def digest(self) -> bytes:
-        return bytes(self._d)
+        """The 32-byte hash of the frames so far."""
+        return self._h.digest()
+
+
+def auth_payload(signer: str, destination: str, timestamp: int) -> bytes:
+    """Authentication Frame payload: signer callsign, destination, ``timestamp`` (Unix time)."""
+    from .callsign import callsign_to_bytes
+
+    t = (timestamp - EPOCH_2020) & 0xFFFFFFFF
+    return callsign_to_bytes(signer) + callsign_to_bytes(destination) + t.to_bytes(4, "big")
+
+
+def parse_auth(payload: bytes) -> tuple[str, str, int]:
+    """(signer, destination, Unix time of signing) from an Authentication Frame payload."""
+    from .callsign import callsign_from_bytes
+
+    if len(payload) != 16:
+        raise ValueError("payload must be 16 bytes")
+    return (
+        callsign_from_bytes(payload[0:6]),
+        callsign_from_bytes(payload[6:12]),
+        int.from_bytes(payload[12:16], "big") + EPOCH_2020,
+    )
 
 
 def _curve():
@@ -115,25 +147,31 @@ def public_key(private: bytes) -> bytes:
     return nums.x.to_bytes(32, "big") + nums.y.to_bytes(32, "big")
 
 
+def _check_hash(digest: bytes) -> bytes:
+    if len(digest) != 32:
+        raise ValueError("the stream hash is 32 bytes (M17 specification 2.1, see StreamHash)")
+    return bytes(digest)
+
+
 def sign(private: bytes, digest: bytes) -> bytes:
-    """64-byte signature of a 16-byte stream digest."""
+    """64-byte signature (r, s) of a 32-byte stream hash, used directly as the ECDSA message hash."""
     from cryptography.hazmat.primitives.asymmetric import ec, utils
 
     key = ec.derive_private_key(int.from_bytes(private, "big"), _curve())
-    # micro-ecc signs the 16-byte digest as is, which equals a zero-padded 32-byte prehash
-    r, s = utils.decode_dss_signature(key.sign(bytes(16) + digest, _prehashed()))
+    r, s = utils.decode_dss_signature(key.sign(_check_hash(digest), _prehashed()))
     return r.to_bytes(32, "big") + s.to_bytes(32, "big")
 
 
 def verify(public: bytes, digest: bytes, signature: bytes) -> bool:
-    """True if ``signature`` over ``digest`` is valid for the 64-byte public key."""
+    """True if ``signature`` over the 32-byte stream hash ``digest`` is valid for the 64-byte public key."""
     from cryptography.exceptions import InvalidSignature
     from cryptography.hazmat.primitives.asymmetric import ec, utils
 
+    digest = _check_hash(digest)  # a wrong length is a usage error, not an invalid signature
     try:
         key = ec.EllipticCurvePublicKey.from_encoded_point(_curve(), b"\x04" + bytes(public))
         der = utils.encode_dss_signature(int.from_bytes(signature[:32], "big"), int.from_bytes(signature[32:64], "big"))
-        key.verify(der, bytes(16) + digest, _prehashed())
+        key.verify(der, digest, _prehashed())
         return True
     except (InvalidSignature, ValueError):
         return False
